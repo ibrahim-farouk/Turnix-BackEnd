@@ -122,14 +122,40 @@
 `Return Home`
 
 ---
-
 ## 5. Workspace
 
 الـWaiting Queue والـStatistics تأتي من الـBackend.
 
-الـEmployee يرى Queue الخاصة بالـBranch التابع له فقط.
+كل Service داخل كل Branch لها Queue مستقلة.
 
-لا يحتاج Employee إلى Branch Selector، لأن الـBackend يعرف الـBranch من المستخدم المسجل.
+### EMPLOYEE
+
+الـEmployee يرى ويتعامل فقط مع Queue الخاصة بالـBranch والـService المرتبط به.
+
+مثال:
+
+Employee → Mansoura Branch → Dentistry
+
+الموظف يرى Dentistry Queue في Mansoura فقط، وليس باقي Services.
+
+لا يحتاج Employee إلى Branch أو Service Selector، لأن الـBackend يعرف الـBranch والـService من المستخدم المسجل.
+
+### ADMIN
+
+الـAdmin مسؤول عن جميع الـBranches والـServices.
+
+في Workspace يكون لديه:
+
+- Branch Dropdown
+- Service Dropdown
+
+بعد اختيار Branch يتم تحميل Services الخاصة به.
+
+بعد اختيار Service يتم عرض Queue الخاصة بالـBranch والـService المختارين.
+
+الـService Dropdown يكون Disabled حتى يتم اختيار Branch.
+
+عند تغيير Branch يتم Reset للـService المختارة.
 
 الـStatistics:
 
@@ -138,7 +164,7 @@
 - Completed
 - Avg Wait
 
-لا يتم حسابها من الـTable في الـFrontend، بل تأتي من الـBackend.
+الـStatistics تخص الـQueue المحددة حالياً وتأتي من الـBackend.
 
 ---
 
@@ -199,6 +225,7 @@
 - Email
 - Phone
 - Branch
+- Service
 - Status
 - Last Login
 - Actions
@@ -220,9 +247,16 @@
 - Email
 - Phone Number
 - Branch
+- Service : [Select Service]
 - Counter Number
 - Password
 - Confirm Password
+
+عند اختيار Branch يتم تحميل Services الخاصة بهذا الـBranch.
+
+الـService Dropdown يكون Disabled حتى يتم اختيار Branch.
+
+عند تغيير Branch يتم Reset للـService المختارة.
 
 بعد النجاح:
 - يتم إغلاق الـModal.
@@ -240,6 +274,7 @@
 - Email
 - Phone
 - Branch
+- Service
 - Counter Number
 - Status
 - Last Login
@@ -257,18 +292,16 @@
 - Email
 - Phone Number
 - Branch
+- Service
 - Counter Number
-
-ويحتوي على Reset Password اختياري:
-
 - New Password
 - Confirm New Password
 
 إذا كانت حقول Password فارغة لا يتم تغيير Password.
-
 الـAdmin لا يرى Password الحالي للموظف، ولكنه يستطيع تعيين Password جديد.
-
 بعد النجاح يتم إغلاق الـModal وتحديث Employees Table.
+
+عند تغيير Branch يتم Reset للـService الحالية وتحميل Services الخاصة بالـBranch الجديد.
 
 ---
 
@@ -291,7 +324,7 @@
 
 مثال:
 
-`Employee → Mansoura Branch → Counter 3`
+`Employee → Mansoura Branch → Dentistry → Counter 3`
 
 لا نحتاج حالياً:
 
@@ -306,14 +339,22 @@
 
 ## 14. Reports
 
+## 14. Reports
+
 صفحة Reports خاصة بالـAdmin.
 
-تحتوي على Branch Filter:
+تحتوي على:
 
+- Branch Filter
+- Service Filter
+- Date Filter
+
+عند اختيار Branch يتم تحميل Services الخاصة به.
+
+يمكن اختيار:
 - All Branches
-- أو Branch محددة
-
-مع Date Filter الموجود في التصميم.
+- All Services
+- أو Branch / Service محددة
 
 كل الـStatistics والـTable Data تأتي من الـBackend حسب الـFilters.
 
@@ -332,6 +373,16 @@
 ### Account Details
 - Employee ID
 - Branch
+- Service
+- Role
+- Last Login
+
+الحقول التالية تكون Read Only:
+- Email
+- Job Title
+- Employee ID
+- Branch
+- Service
 - Role
 - Last Login
 
@@ -363,14 +414,13 @@
 
 ## 16. Settings
 
-Settings خاصة بالـAdmin فقط.
+`Default Service Time` هي متوسط الوقت المتوقع لخدمة Customer واحد.
 
-في الـMVP تحتوي على:
+في الـMVP تكون Global لجميع الـBranches والـServices.
 
-- Default Service Time
-- Save Changes
+القيمة الافتراضية تكون 15 دقيقة، ويمكن للـAdmin تغييرها من Settings.
 
-`Default Service Time` تكون Global لجميع الفروع في الـMVP.
+يستخدم الـBackend هذه القيمة في حساب Estimated Wait.
 
 لا نحتاج حالياً:
 - Branch Management
@@ -491,22 +541,54 @@ Employees وWaiting Queue يدعمان:
 
 ---
 
-## Out of Scope – MVP
+## Queue Logic
 
-لا يتم تنفيذ التالي حالياً:
+كل Service داخل كل Branch لها Queue مستقلة.
 
-- Customer Accounts
-- Customer Login / Register
-- Branch Management
-- Service Management
-- Counter Management
-- Department Management
-- On Break System
-- Advanced Permissions
-- Advanced Notifications
-- WebSocket / Socket.IO
-- Advanced Queue Rules
+مثال:
 
-أي Features إضافية تعتبر Future Work ولا يتم إضافتها خلال الـMVP الحالي.
+Dentistry:
+A101 → A102 → A103
+
+Internal Medicine:
+B101 → B102 → B103
+
+ENT:
+C101 → C102 → C103
+
+الـTicket Number يتم إنشاؤه من الـBackend وليس الـFrontend.
+
+كل Service يكون لها Prefix خاص بها مثل:
+
+- Dentistry → A
+- Internal Medicine → B
+- ENT → C
+- Ophthalmology → D
+- Pediatrics → E
+
+Queue Position وPeople Ahead يتم حسابهم داخل نفس الـBranch ونفس الـService فقط.
+
+مثال:
+
+إذا كان العميل A103 في Dentistry، يتم حساب مكانه بناءً على عملاء Dentistry فقط، وليس باقي Services.
+
+---
+
+Estimated Wait يتم حسابه في الـBackend باستخدام:
+
+Estimated Wait = People Ahead × Default Service Time
+
+مثال إذا كان Default Service Time = 15 دقيقة:
+
+Position 1 → 0 دقيقة
+Position 2 → 15 دقيقة
+Position 3 → 30 دقيقة
+Position 4 → 45 دقيقة
+
+الـFrontend يعرض Estimated Wait القادمة من الـBackend ولا يقوم بحسابها بنفسه.
+
+---
+
+
 
 </div>
