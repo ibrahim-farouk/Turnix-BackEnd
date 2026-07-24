@@ -508,3 +508,5 @@ Employees وWaiting Queue يدعمان:
 - Advanced Queue Rules
 
 أي Features إضافية تعتبر Future Work ولا يتم إضافتها خلال الـMVP الحالي.
+
+</div>
