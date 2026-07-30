@@ -1,0 +1,292 @@
+# docs/paths/employees.yaml
+# Source of truth: src/modules/employees/employee.routes.js (ADMIN only)
+
+/employees:
+  get:
+    tags: [Employees]
+    summary: List employees
+    description: ADMIN only. Paginated list of employees with optional search (fullName or employeeId), branch and status filters.
+    operationId: getEmployees
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PageParam"
+      - $ref: "#/components/parameters/LimitParam"
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Case-insensitive match on fullName or employeeId.
+      - name: branch
+        in: query
+        required: false
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+        description: Filter by branch ID.
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: "#/components/schemas/UserStatus"
+        description: Filter by account status.
+    responses:
+      "200":
+        description: Employees fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeListResponse"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  post:
+    tags: [Employees]
+    summary: Create an employee
+    description: |
+      ADMIN only. Creates an EMPLOYEE with an auto-generated employeeId (EMP-XXX).
+      The branch must exist and be active, the service must belong to the branch,
+      and the branch/service pair must not already have an active assigned employee (409).
+    operationId: createEmployee
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CreateEmployeeRequest"
+          example:
+            fullName: "Sara Ali"
+            jobTitle: "Customer Service Agent"
+            email: "sara.ali@turnix.com"
+            phone: "01098765432"
+            password: "StrongPass123"
+            branchId: "665f1c2ab8f4e21d3c9a7b02"
+            serviceId: "665f1c2ab8f4e21d3c9a7b03"
+            counterNumber: 3
+    responses:
+      "201":
+        description: Employee created.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeResponse"
+      "400":
+        description: Validation failed, email/phone already exists, inactive branch, or service not in branch.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            examples:
+              emailExists:
+                value:
+                  status: error
+                  error: { code: EMAIL_ALREADY_EXISTS, message: "Email already exists" }
+              phoneExists:
+                value:
+                  status: error
+                  error: { code: PHONE_ALREADY_EXISTS, message: "Phone already exists" }
+              validation:
+                value:
+                  status: error
+                  error:
+                    code: VALIDATION_ERROR
+                    message: "Validation failed"
+                    details:
+                      - { field: "phone", message: "Invalid phone number" }
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "409":
+        description: An active employee is already assigned to this branch/service.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error: { code: CONFLICT, message: "Employee already assigned to service" }
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/employees/{id}:
+  get:
+    tags: [Employees]
+    summary: Get an employee by ID
+    description: ADMIN only.
+    operationId: getEmployee
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    responses:
+      "200":
+        description: Employee fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeResponse"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  patch:
+    tags: [Employees]
+    summary: Update an employee
+    description: |
+      ADMIN only. Partial update. When changing branch/service, the branch must be active,
+      the service must belong to the branch, and the pair must not be assigned to another
+      active employee (409).
+    operationId: updateEmployee
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpdateEmployeeRequest"
+          example:
+            counterNumber: 5
+            status: "ACTIVE"
+    responses:
+      "200":
+        description: Employee updated.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeResponse"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "409":
+        $ref: "#/components/responses/Conflict"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  delete:
+    tags: [Employees]
+    summary: Deactivate an employee (soft delete)
+    description: ADMIN only. Sets the employee status to INACTIVE (the document is NOT removed).
+    operationId: deleteEmployee
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    responses:
+      "200":
+        description: Employee deactivated.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeResponse"
+            example:
+              success: true
+              message: "Employee deleted successfully"
+              data:
+                _id: "665f1c2ab8f4e21d3c9a7b05"
+                employeeId: "EMP-002"
+                fullName: "Sara Ali"
+                email: "sara.ali@turnix.com"
+                phone: "01098765432"
+                jobTitle: "Customer Service Agent"
+                role: "EMPLOYEE"
+                status: "INACTIVE"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/employees/{id}/reset-password:
+  patch:
+    tags: [Employees]
+    summary: Reset an employee's password
+    description: ADMIN only. Sets a new password and flags mustChangePassword=true for the employee.
+    operationId: resetEmployeePassword
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ResetEmployeePasswordRequest"
+          example:
+            newPassword: "NewStrongPass456"
+    responses:
+      "200":
+        description: Password reset.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetEmployeePasswordResponse"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

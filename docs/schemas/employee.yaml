@@ -1,0 +1,191 @@
+# docs/schemas/employee.yaml
+# Source of truth: src/models/user.model.js, src/modules/employees/*
+
+components:
+  schemas:
+    PopulatedRef:
+      type: object
+      description: Populated Mongoose reference (branch/service) in employee responses.
+      required: [_id, name]
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          example: "Downtown Branch"
+
+    Employee:
+      type: object
+      description: Employee document (password excluded, branch/service populated with name).
+      required: [_id, fullName, email, phone, jobTitle, role, status]
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        employeeId:
+          type: string
+          description: Auto-generated (EMP-XXX).
+          example: "EMP-001"
+        fullName:
+          type: string
+          example: "Sara Ali"
+        email:
+          type: string
+          format: email
+          example: "sara.ali@turnix.com"
+        phone:
+          type: string
+          pattern: "^01[0125][0-9]{8}$"
+          example: "01098765432"
+        jobTitle:
+          type: string
+          example: "Customer Service Agent"
+        mustChangePassword:
+          type: boolean
+          default: false
+          description: Set to true after an admin password reset.
+        role:
+          $ref: "#/components/schemas/UserRole"
+        branch:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PopulatedRef"
+        service:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PopulatedRef"
+        counterNumber:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 3
+        profileImage:
+          type: string
+          nullable: true
+          description: Relative upload path, or null.
+          example: "uploads/profiles/665f...-1722300000000.jpeg"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateEmployeeRequest:
+      type: object
+      required: [fullName, jobTitle, email, phone, password, branchId, serviceId, counterNumber]
+      properties:
+        fullName:
+          type: string
+          minLength: 3
+          maxLength: 100
+          example: "Sara Ali"
+        jobTitle:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Customer Service Agent"
+        email:
+          type: string
+          format: email
+          description: Lowercased by the API. Must be unique.
+          example: "sara.ali@turnix.com"
+        phone:
+          type: string
+          pattern: "^01[0125][0-9]{8}$"
+          description: Egyptian mobile number. Must be unique.
+          example: "01098765432"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 100
+        branchId:
+          $ref: "#/components/schemas/ObjectId"
+        serviceId:
+          $ref: "#/components/schemas/ObjectId"
+        counterNumber:
+          type: integer
+          minimum: 1
+          example: 3
+
+    UpdateEmployeeRequest:
+      type: object
+      description: All fields optional; only provided fields are updated.
+      properties:
+        fullName:
+          type: string
+          minLength: 3
+          maxLength: 100
+        phone:
+          type: string
+          pattern: "^01[0125][0-9]{8}$"
+        branchId:
+          $ref: "#/components/schemas/ObjectId"
+        serviceId:
+          $ref: "#/components/schemas/ObjectId"
+        counterNumber:
+          type: integer
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/UserStatus"
+
+    ResetEmployeePasswordRequest:
+      type: object
+      required: [newPassword]
+      properties:
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 100
+
+    EmployeeResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Employee fetched successfully"
+        data:
+          $ref: "#/components/schemas/Employee"
+
+    EmployeeListResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Employees fetched successfully"
+        data:
+          type: object
+          required: [employees, pagination]
+          properties:
+            employees:
+              type: array
+              items:
+                $ref: "#/components/schemas/Employee"
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+
+    ResetEmployeePasswordResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Password reset successfully"

@@ -1,0 +1,240 @@
+# docs/schemas/common.yaml
+# Shared reusable OpenAPI components for the Turnix API.
+# Source of truth:
+#   - src/common/utils/constants.js (ERROR_CODES, TICKET_STATUS, USER_ROLES, USER_STATUS, PAGINATION, RATE_LIMIT)
+#   - src/common/middleware/error.middleware.js (error envelope)
+#   - src/common/middleware/validate.middleware.js (validation details)
+
+components:
+  schemas:
+    ObjectId:
+      type: string
+      pattern: "^[0-9a-fA-F]{24}$"
+      description: MongoDB ObjectId (24-character hex string).
+      example: "665f1c2ab8f4e21d3c9a7b01"
+
+    ErrorCode:
+      type: string
+      description: Application error codes (src/common/utils/constants.js > ERROR_CODES).
+      enum:
+        - VALIDATION_ERROR
+        - NOT_FOUND
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - CONFLICT
+        - INTERNAL_SERVER_ERROR
+        - USER_NOT_FOUND
+        - EMAIL_ALREADY_EXISTS
+        - PHONE_ALREADY_EXISTS
+        - INVALID_CREDENTIALS
+        - INVALID_PASSWORD
+        - FILE_REQUIRED
+        - INVALID_FILE_TYPE
+        - FILE_TOO_LARGE
+
+    ErrorDetail:
+      type: object
+      description: Field-level validation error produced by the Zod validation middleware.
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: Path of the invalid field (body prefix stripped).
+          example: "customerPhone"
+        message:
+          type: string
+          example: "Please enter a valid Egyptian phone number"
+
+    ErrorResponse:
+      type: object
+      description: Standard error envelope produced by the global error handler.
+      required: [status, error]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              $ref: "#/components/schemas/ErrorCode"
+            message:
+              type: string
+              example: "Something went wrong"
+            details:
+              type: array
+              description: Present only for VALIDATION_ERROR responses.
+              items:
+                $ref: "#/components/schemas/ErrorDetail"
+
+    RateLimitResponse:
+      type: object
+      description: Returned by express-rate-limit (300 requests / 15 minutes per IP).
+      properties:
+        error:
+          type: string
+          example: "Too many requests, please try again later."
+
+    Pagination:
+      type: object
+      description: Pagination metadata (employees & reports listings).
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 42
+        totalPages:
+          type: integer
+          example: 5
+
+    BranchRef:
+      type: object
+      description: Minimal branch reference embedded in responses.
+      required: [id, name]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          example: "Downtown Branch"
+
+    ServiceRef:
+      type: object
+      description: Minimal service reference embedded in responses.
+      required: [id, name]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          example: "Customer Service"
+
+    TicketStatus:
+      type: string
+      description: Ticket lifecycle status (TICKET_STATUS constant).
+      enum: [WAITING, SERVING, COMPLETED, SKIPPED, CANCELLED]
+      example: WAITING
+
+    UserRole:
+      type: string
+      description: User role (USER_ROLES constant).
+      enum: [ADMIN, EMPLOYEE]
+      example: EMPLOYEE
+
+    UserStatus:
+      type: string
+      description: User account status (USER_STATUS constant).
+      enum: [ACTIVE, INACTIVE]
+      example: ACTIVE
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number (1-based).
+
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+      description: Items per page (max 100).
+
+  responses:
+    ValidationError:
+      description: Request validation failed (Zod).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            error:
+              code: VALIDATION_ERROR
+              message: "Validation failed"
+              details:
+                - field: "customerPhone"
+                  message: "Please enter a valid Egyptian phone number"
+
+    Unauthorized:
+      description: Missing, invalid, or expired Bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            error:
+              code: UNAUTHORIZED
+              message: "Authentication required"
+
+    Forbidden:
+      description: Authenticated but not allowed to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            error:
+              code: FORBIDDEN
+              message: "You do not have permission to perform this action"
+
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            error:
+              code: NOT_FOUND
+              message: "Not found"
+
+    Conflict:
+      description: Conflict with the current state of the resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            error:
+              code: CONFLICT
+              message: "There is already a serving ticket"
+
+    TooManyRequests:
+      description: Rate limit exceeded (300 requests / 15 minutes per IP).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RateLimitResponse"
+
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            error:
+              code: INTERNAL_SERVER_ERROR
+              message: "Something went wrong"

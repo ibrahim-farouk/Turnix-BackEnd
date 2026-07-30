@@ -1,0 +1,33 @@
+# docs/schemas/service.yaml
+# Source of truth: src/models/service.model.js, src/modules/services/service.service.js
+
+components:
+  schemas:
+    BranchServiceItem:
+      type: object
+      description: Active service offered by a branch (public listing).
+      required: [_id, name, prefix]
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          description: Service name (unique per branch).
+          example: "Customer Service"
+        prefix:
+          type: string
+          description: Uppercase ticket prefix (unique per branch). Ticket numbers look like A101.
+          example: "A"
+
+    BranchServicesResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: array
+          description: Empty array when the branch has no active services (or does not exist).
+          items:
+            $ref: "#/components/schemas/BranchServiceItem"

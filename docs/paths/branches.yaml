@@ -1,0 +1,29 @@
+# docs/paths/branches.yaml
+# Source of truth: src/modules/branches/branches.routes.js
+
+/branches:
+  get:
+    tags: [Branches]
+    summary: List active branches
+    description: Public endpoint. Returns all active branches for the customer join-queue flow.
+    operationId: getBranches
+    security: []
+    responses:
+      "200":
+        description: Active branches fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchListResponse"
+            example:
+              success: true
+              message: "Branches fetched successfully"
+              data:
+                - _id: "665f1c2ab8f4e21d3c9a7b02"
+                  name: "Downtown Branch"
+                - _id: "665f1c2ab8f4e21d3c9a7b09"
+                  name: "Nasr City Branch"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

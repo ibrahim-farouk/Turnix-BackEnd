@@ -1,0 +1,139 @@
+# docs/paths/tickets.yaml
+# Source of truth: src/modules/tickets/ticket.routes.js
+
+/tickets:
+  post:
+    tags: [Tickets]
+    summary: Join the queue (create a ticket)
+    description: |
+      Public endpoint. Creates a ticket for the given branch/service, assigns a
+      sequential ticket number (prefix + number, per service per day, Africa/Cairo timezone)
+      and returns queue position, people ahead, and estimated wait.
+      The guestToken is returned ONCE and must be stored by the client to track the ticket.
+    operationId: joinQueue
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CreateTicketRequest"
+          example:
+            branchId: "665f1c2ab8f4e21d3c9a7b02"
+            serviceId: "665f1c2ab8f4e21d3c9a7b03"
+            customerName: "Ahmed Hassan"
+            customerPhone: "01012345678"
+    responses:
+      "201":
+        description: Ticket created.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketResponse"
+            example:
+              success: true
+              message: "Ticket created successfully"
+              data:
+                ticket:
+                  id: "665f1c2ab8f4e21d3c9a7b10"
+                  ticketNumber: "A104"
+                  status: "WAITING"
+                  queuePosition: 4
+                  peopleAhead: 3
+                  estimatedWait: 45
+                  branch: { id: "665f1c2ab8f4e21d3c9a7b02", name: "Downtown Branch" }
+                  service: { id: "665f1c2ab8f4e21d3c9a7b03", name: "Customer Service" }
+                  joinedAt: "2026-07-30T10:15:00.000Z"
+                guestToken: "3f9d1c0a8b7e6d5c4b3a29181716151413121110ffeeddccbbaa998877665544"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "404":
+        description: Branch not found, or service not found for this branch.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error:
+                code: NOT_FOUND
+                message: "Service not found for this branch"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/tickets/{ticketId}/track:
+  get:
+    tags: [Tickets]
+    summary: Track a ticket
+    description: |
+      Public endpoint secured by the X-Guest-Token header (returned once on ticket creation).
+      Returns live queue status: position, people ahead, estimated wait, currently serving
+      ticket number, and counter number.
+    operationId: trackTicket
+    security: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+        description: Ticket ID.
+      - name: X-Guest-Token
+        in: header
+        required: true
+        schema:
+          type: string
+        description: The guest token returned when the ticket was created.
+    responses:
+      "200":
+        description: Live tracking snapshot.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackTicketResponse"
+            example:
+              success: true
+              data:
+                id: "665f1c2ab8f4e21d3c9a7b10"
+                ticketNumber: "A104"
+                status: "WAITING"
+                branch: { id: "665f1c2ab8f4e21d3c9a7b02", name: "Downtown Branch" }
+                service: { id: "665f1c2ab8f4e21d3c9a7b03", name: "Customer Service" }
+                joinedAt: "2026-07-30T10:15:00.000Z"
+                queuePosition: 3
+                peopleAhead: 2
+                estimatedWait: 30
+                currentServing: "A101"
+                counterNumber: 3
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        description: Guest token header is missing.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error:
+                code: UNAUTHORIZED
+                message: "Guest token is required"
+      "403":
+        description: Guest token does not match this ticket.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error:
+                code: FORBIDDEN
+                message: "Invalid guest token"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

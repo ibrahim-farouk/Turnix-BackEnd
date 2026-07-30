@@ -1,0 +1,313 @@
+# docs/paths/workspace.yaml
+# Source of truth: src/modules/workspace/workspace.routes.js
+
+/workspace:
+  get:
+    tags: [Workspace]
+    summary: Get today's queue workspace
+    description: |
+      Returns today's queue for a branch/service: statistics, current serving ticket and waiting queue.
+      EMPLOYEE: uses the employee's assigned branch/service (query params ignored).
+      ADMIN: branchId and serviceId query params are REQUIRED (400 otherwise).
+    operationId: getWorkspace
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: branchId
+        in: query
+        required: false
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+        description: Required for ADMIN users.
+      - name: serviceId
+        in: query
+        required: false
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+        description: Required for ADMIN users.
+    responses:
+      "200":
+        description: Workspace fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceResponse"
+            example:
+              success: true
+              message: "Workspace fetched successfully"
+              data:
+                branch: { id: "665f1c2ab8f4e21d3c9a7b02", name: "Downtown Branch" }
+                service: { id: "665f1c2ab8f4e21d3c9a7b03", name: "Customer Service" }
+                statistics: { waiting: 2, serving: 1, completed: 23, avgWait: 12 }
+                currentServing:
+                  id: "665f1c2ab8f4e21d3c9a7b10"
+                  ticketNumber: "A101"
+                  customerName: "Ahmed Hassan"
+                  customerPhone: "01012345678"
+                  counterNumber: 3
+                  calledAt: "2026-07-30T10:30:00.000Z"
+                  status: "SERVING"
+                  service: { id: "665f1c2ab8f4e21d3c9a7b03", name: "Customer Service" }
+                  joinedAt: "2026-07-30T10:15:00.000Z"
+                waitingQueue:
+                  - id: "665f1c2ab8f4e21d3c9a7b11"
+                    ticketNumber: "A102"
+                    customerName: "Mona Adel"
+                    customerPhone: "01198765432"
+                    status: "WAITING"
+                    service: { id: "665f1c2ab8f4e21d3c9a7b03", name: "Customer Service" }
+                    queuePosition: 2
+                    peopleAhead: 1
+                    estimatedWait: 15
+                    joinedAt: "2026-07-30T10:20:00.000Z"
+      "400":
+        description: Validation failed, employee not assigned to a branch/service, or missing admin filters.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error:
+                code: VALIDATION_ERROR
+                message: "Branch and service are required"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/workspace/tickets/{ticketId}/call:
+  patch:
+    tags: [Workspace]
+    summary: Call the next customer (WAITING -> SERVING)
+    description: |
+      EMPLOYEE only (403 for ADMIN). The employee must be assigned to a branch, service and counter.
+      Fails with 409 if the ticket is not WAITING or another ticket is currently SERVING in the same queue.
+    operationId: callCustomer
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    responses:
+      "200":
+        description: Customer called.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [success, message, data]
+              properties:
+                success: { type: boolean, enum: [true] }
+                message: { type: string, example: "Customer called successfully" }
+                data:
+                  type: object
+                  required: [ticket]
+                  properties:
+                    ticket:
+                      $ref: "#/components/schemas/CalledTicket"
+            example:
+              success: true
+              message: "Customer called successfully"
+              data:
+                ticket:
+                  id: "665f1c2ab8f4e21d3c9a7b11"
+                  ticketNumber: "A102"
+                  status: "SERVING"
+                  counterNumber: 3
+                  calledAt: "2026-07-30T10:45:00.000Z"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "409":
+        $ref: "#/components/responses/Conflict"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/workspace/tickets/{ticketId}/complete:
+  patch:
+    tags: [Workspace]
+    summary: Complete the current service (SERVING -> COMPLETED)
+    description: EMPLOYEE only. The ticket must be SERVING and called by the same employee (403 otherwise).
+    operationId: completeService
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    responses:
+      "200":
+        description: Service completed.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [success, message, data]
+              properties:
+                success: { type: boolean, enum: [true] }
+                message: { type: string, example: "Service completed successfully" }
+                data:
+                  type: object
+                  required: [ticket]
+                  properties:
+                    ticket:
+                      $ref: "#/components/schemas/CompletedTicket"
+            example:
+              success: true
+              message: "Service completed successfully"
+              data:
+                ticket:
+                  id: "665f1c2ab8f4e21d3c9a7b11"
+                  ticketNumber: "A102"
+                  status: "COMPLETED"
+                  completedAt: "2026-07-30T10:55:00.000Z"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "409":
+        description: Only serving tickets can be completed.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error:
+                code: CONFLICT
+                message: "Only serving tickets can be completed"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/workspace/tickets/{ticketId}/skip:
+  patch:
+    tags: [Workspace]
+    summary: Skip the current customer (SERVING -> SKIPPED)
+    description: EMPLOYEE only. The ticket must be SERVING and called by the same employee (403 otherwise).
+    operationId: skipCustomer
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    responses:
+      "200":
+        description: Customer skipped.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [success, message, data]
+              properties:
+                success: { type: boolean, enum: [true] }
+                message: { type: string, example: "Customer skipped successfully" }
+                data:
+                  type: object
+                  required: [ticket]
+                  properties:
+                    ticket:
+                      $ref: "#/components/schemas/TicketActionResult"
+            example:
+              success: true
+              message: "Customer skipped successfully"
+              data:
+                ticket:
+                  id: "665f1c2ab8f4e21d3c9a7b11"
+                  ticketNumber: "A102"
+                  status: "SKIPPED"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "409":
+        $ref: "#/components/responses/Conflict"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/workspace/tickets/{ticketId}/cancel:
+  patch:
+    tags: [Workspace]
+    summary: Cancel the current service (SERVING -> CANCELLED)
+    description: EMPLOYEE only. The ticket must be SERVING and called by the same employee (403 otherwise).
+    operationId: cancelService
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+    responses:
+      "200":
+        description: Service cancelled.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [success, message, data]
+              properties:
+                success: { type: boolean, enum: [true] }
+                message: { type: string, example: "Service cancelled successfully" }
+                data:
+                  type: object
+                  required: [ticket]
+                  properties:
+                    ticket:
+                      $ref: "#/components/schemas/TicketActionResult"
+            example:
+              success: true
+              message: "Service cancelled successfully"
+              data:
+                ticket:
+                  id: "665f1c2ab8f4e21d3c9a7b11"
+                  ticketNumber: "A102"
+                  status: "CANCELLED"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "409":
+        $ref: "#/components/responses/Conflict"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

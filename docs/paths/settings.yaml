@@ -1,0 +1,66 @@
+# docs/paths/settings.yaml
+# Source of truth: src/modules/settings/setting.routes.js (ADMIN only)
+
+/settings:
+  get:
+    tags: [Settings]
+    summary: Get system settings
+    description: ADMIN only. Auto-creates settings with defaults (defaultServiceTime = 15) on first access.
+    operationId: getSettings
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Settings fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsResponse"
+            example:
+              status: success
+              data:
+                _id: "665f1c2ab8f4e21d3c9a7b20"
+                defaultServiceTime: 15
+                createdAt: "2026-07-30T00:00:00.000Z"
+                updatedAt: "2026-07-30T00:00:00.000Z"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  patch:
+    tags: [Settings]
+    summary: Update system settings
+    description: ADMIN only. Updates the default service time used for wait estimation.
+    operationId: updateSettings
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpdateSettingsRequest"
+          example:
+            defaultServiceTime: 20
+    responses:
+      "200":
+        description: Settings updated.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsResponse"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

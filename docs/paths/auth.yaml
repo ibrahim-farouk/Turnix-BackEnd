@@ -1,0 +1,72 @@
+# docs/paths/auth.yaml
+# Source of truth: src/modules/auth/auth.routes.js
+
+/auth/login:
+  post:
+    tags: [Auth]
+    summary: Login with email and password
+    description: |
+      Authenticates an ADMIN or EMPLOYEE and returns a JWT Bearer token.
+      Token expires in 10 hours, or 30 days when rememberMe is true.
+      Inactive accounts are rejected with 403.
+    operationId: login
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LoginRequest"
+          example:
+            email: "admin@turnix.com"
+            password: "StrongPass123"
+            rememberMe: false
+    responses:
+      "200":
+        description: Login successful.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginResponse"
+            example:
+              success: true
+              message: "Login successful"
+              data:
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                user:
+                  id: "665f1c2ab8f4e21d3c9a7b01"
+                  employeeId: "EMP-001"
+                  fullName: "Sara Ali"
+                  email: "sara.ali@turnix.com"
+                  role: "EMPLOYEE"
+                  branch: { id: "665f1c2ab8f4e21d3c9a7b02", name: "Downtown Branch" }
+                  service: { id: "665f1c2ab8f4e21d3c9a7b03", name: "Customer Service" }
+                  counterNumber: 3
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        description: Invalid email or password.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error:
+                code: UNAUTHORIZED
+                message: "Invalid email or password"
+      "403":
+        description: Account is inactive.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error:
+                code: FORBIDDEN
+                message: "Your account is inactive"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

@@ -1,0 +1,57 @@
+# docs/schemas/settings.yaml
+# Source of truth: src/models/setting.model.js, src/modules/settings/*
+
+components:
+  schemas:
+    Setting:
+      type: object
+      description: System settings document (auto-created with defaults on first access).
+      required: [_id, defaultServiceTime]
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        defaultServiceTime:
+          type: integer
+          minimum: 1
+          default: 15
+          description: Average service time in minutes, used to estimate waiting times.
+          example: 15
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateSettingsRequest:
+      type: object
+      required: [defaultServiceTime]
+      properties:
+        defaultServiceTime:
+          type: integer
+          minimum: 1
+          description: Minutes. Must be an integer >= 1.
+          example: 20
+
+    SettingsResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/Setting"
+
+    UpdateSettingsResponse:
+      type: object
+      required: [status, message, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+          example: "Settings updated successfully."
+        data:
+          $ref: "#/components/schemas/Setting"

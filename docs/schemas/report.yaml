@@ -1,0 +1,82 @@
+# docs/schemas/report.yaml
+# Source of truth: src/modules/reports/report.repository.js, report.service.js
+
+components:
+  schemas:
+    ReportSummary:
+      type: object
+      description: Aggregated totals across the filtered date range.
+      required: [served, skipped, averageWaitingTime, averageServiceTime]
+      properties:
+        served:
+          type: integer
+          description: Total COMPLETED tickets.
+          example: 120
+        skipped:
+          type: integer
+          description: Total SKIPPED tickets.
+          example: 8
+        averageWaitingTime:
+          type: integer
+          description: Average (calledAt - joinedAt) in minutes, rounded.
+          example: 14
+        averageServiceTime:
+          type: integer
+          description: Average (completedAt - calledAt) in minutes, rounded.
+          example: 11
+
+    ReportRecord:
+      type: object
+      description: Daily performance record grouped by queueDate.
+      required: [date, served, skipped, averageWaitingTime, averageServiceTime]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Queue date (YYYY-MM-DD, Africa/Cairo timezone).
+          example: "2026-07-30"
+        served:
+          type: integer
+          example: 40
+        skipped:
+          type: integer
+          example: 3
+        averageWaitingTime:
+          type: integer
+          example: 12
+        averageServiceTime:
+          type: integer
+          example: 10
+
+    ReportsResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+          required: [summary, records, pagination]
+          properties:
+            summary:
+              $ref: "#/components/schemas/ReportSummary"
+            records:
+              type: array
+              items:
+                $ref: "#/components/schemas/ReportRecord"
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+
+    ReportsExportResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: array
+          description: All matching daily records without pagination.
+          items:
+            $ref: "#/components/schemas/ReportRecord"

@@ -1,0 +1,283 @@
+# docs/schemas/ticket.yaml
+# Source of truth: src/models/ticket.model.js, src/modules/tickets/*, src/modules/workspace/*
+
+components:
+  schemas:
+    CreateTicketRequest:
+      type: object
+      required: [branchId, serviceId, customerName, customerPhone]
+      properties:
+        branchId:
+          $ref: "#/components/schemas/ObjectId"
+        serviceId:
+          $ref: "#/components/schemas/ObjectId"
+        customerName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Ahmed Hassan"
+        customerPhone:
+          type: string
+          pattern: "^01[0125][0-9]{8}$"
+          description: Egyptian mobile number.
+          example: "01012345678"
+
+    NewTicket:
+      type: object
+      description: Ticket returned right after joining the queue.
+      required: [id, ticketNumber, status, queuePosition, peopleAhead, estimatedWait, branch, service, joinedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        ticketNumber:
+          type: string
+          description: Service prefix + sequential number (resets daily per service).
+          example: "A101"
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        queuePosition:
+          type: integer
+          example: 4
+        peopleAhead:
+          type: integer
+          example: 3
+        estimatedWait:
+          type: integer
+          description: Estimated waiting time in minutes (peopleAhead x defaultServiceTime).
+          example: 45
+        branch:
+          $ref: "#/components/schemas/BranchRef"
+        service:
+          $ref: "#/components/schemas/ServiceRef"
+        joinedAt:
+          type: string
+          format: date-time
+
+    CreateTicketResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Ticket created successfully"
+        data:
+          type: object
+          required: [ticket, guestToken]
+          properties:
+            ticket:
+              $ref: "#/components/schemas/NewTicket"
+            guestToken:
+              type: string
+              description: 64-char hex token returned ONCE. Required as X-Guest-Token header to track the ticket.
+              example: "3f9d1c0a8b7e6d5c4b3a29181716151413121110ffeeddccbbaa998877665544"
+
+    TrackedTicket:
+      type: object
+      description: Live tracking snapshot of a ticket.
+      required: [id, ticketNumber, status, branch, service, joinedAt, queuePosition, peopleAhead, estimatedWait, currentServing, counterNumber]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        ticketNumber:
+          type: string
+          example: "A101"
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        branch:
+          $ref: "#/components/schemas/BranchRef"
+        service:
+          $ref: "#/components/schemas/ServiceRef"
+        joinedAt:
+          type: string
+          format: date-time
+        queuePosition:
+          type: integer
+          nullable: true
+          description: Null for COMPLETED/SKIPPED/CANCELLED, 0 while SERVING.
+          example: 4
+        peopleAhead:
+          type: integer
+          example: 3
+        estimatedWait:
+          type: integer
+          description: Minutes.
+          example: 45
+        currentServing:
+          type: string
+          nullable: true
+          description: Ticket number currently being served in the same queue.
+          example: "A098"
+        counterNumber:
+          type: integer
+          nullable: true
+          example: 3
+
+    TrackTicketResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/TrackedTicket"
+
+    WorkspaceStatistics:
+      type: object
+      description: Today's queue statistics for the branch/service.
+      required: [waiting, serving, completed, avgWait]
+      properties:
+        waiting:
+          type: integer
+          example: 5
+        serving:
+          type: integer
+          example: 1
+        completed:
+          type: integer
+          example: 23
+        avgWait:
+          type: integer
+          description: Average wait (calledAt - joinedAt) in minutes, rounded.
+          example: 12
+
+    WorkspaceWaitingTicket:
+      type: object
+      required: [id, ticketNumber, customerName, customerPhone, status, service, queuePosition, peopleAhead, estimatedWait, joinedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        ticketNumber:
+          type: string
+          example: "A102"
+        customerName:
+          type: string
+          example: "Ahmed Hassan"
+        customerPhone:
+          type: string
+          example: "01012345678"
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        service:
+          $ref: "#/components/schemas/ServiceRef"
+        queuePosition:
+          type: integer
+          example: 2
+        peopleAhead:
+          type: integer
+          example: 1
+        estimatedWait:
+          type: integer
+          description: Minutes.
+          example: 15
+        joinedAt:
+          type: string
+          format: date-time
+
+    WorkspaceCurrentServing:
+      type: object
+      nullable: true
+      required: [id, ticketNumber, customerName, customerPhone, counterNumber, calledAt, status, service, joinedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        ticketNumber:
+          type: string
+          example: "A101"
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        counterNumber:
+          type: integer
+          nullable: true
+          example: 3
+        calledAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        service:
+          $ref: "#/components/schemas/ServiceRef"
+        joinedAt:
+          type: string
+          format: date-time
+
+    WorkspaceResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Workspace fetched successfully"
+        data:
+          type: object
+          required: [branch, service, statistics, currentServing, waitingQueue]
+          properties:
+            branch:
+              $ref: "#/components/schemas/BranchRef"
+            service:
+              $ref: "#/components/schemas/ServiceRef"
+            statistics:
+              $ref: "#/components/schemas/WorkspaceStatistics"
+            currentServing:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/WorkspaceCurrentServing"
+            waitingQueue:
+              type: array
+              items:
+                $ref: "#/components/schemas/WorkspaceWaitingTicket"
+
+    CalledTicket:
+      type: object
+      required: [id, ticketNumber, status, counterNumber, calledAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        ticketNumber:
+          type: string
+          example: "A102"
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        counterNumber:
+          type: integer
+          example: 3
+        calledAt:
+          type: string
+          format: date-time
+
+    CompletedTicket:
+      type: object
+      required: [id, ticketNumber, status, completedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        ticketNumber:
+          type: string
+          example: "A102"
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        completedAt:
+          type: string
+          format: date-time
+
+    TicketActionResult:
+      type: object
+      description: Minimal ticket returned by skip / cancel actions.
+      required: [id, ticketNumber, status]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        ticketNumber:
+          type: string
+          example: "A102"
+        status:
+          $ref: "#/components/schemas/TicketStatus"

@@ -1,0 +1,39 @@
+# docs/paths/services.yaml
+# Source of truth: src/modules/services/service.routes.js (mounted under /branches)
+
+/branches/{branchId}/services:
+  get:
+    tags: [Services]
+    summary: List active services of a branch
+    description: Public endpoint. Returns the active services offered by the given branch. Returns an empty array when the branch has no active services or does not exist.
+    operationId: getBranchServices
+    security: []
+    parameters:
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+        description: Branch ID.
+    responses:
+      "200":
+        description: Active services fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchServicesResponse"
+            example:
+              success: true
+              data:
+                - _id: "665f1c2ab8f4e21d3c9a7b03"
+                  name: "Customer Service"
+                  prefix: "A"
+                - _id: "665f1c2ab8f4e21d3c9a7b04"
+                  name: "Technical Support"
+                  prefix: "B"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

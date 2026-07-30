@@ -1,0 +1,79 @@
+# docs/schemas/auth.yaml
+# Source of truth: src/modules/auth/auth.validator.js, src/modules/auth/auth.service.js
+
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email. Trimmed and lowercased by the API.
+          example: "admin@turnix.com"
+        password:
+          type: string
+          minLength: 1
+          format: password
+          example: "StrongPass123"
+        rememberMe:
+          type: boolean
+          default: false
+          description: When true the JWT expires in 30 days instead of 10 hours.
+
+    AuthUser:
+      type: object
+      description: Safe user object returned on successful login.
+      required: [id, fullName, email, role]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        employeeId:
+          type: string
+          nullable: true
+          description: Auto-generated employee identifier (EMP-XXX). Null for seeded admins without one.
+          example: "EMP-001"
+        fullName:
+          type: string
+          example: "Ibrahim Mohamed"
+        email:
+          type: string
+          format: email
+          example: "employee@turnix.com"
+        role:
+          $ref: "#/components/schemas/UserRole"
+        branch:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/BranchRef"
+        service:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ServiceRef"
+        counterNumber:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 3
+
+    LoginResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Login successful"
+        data:
+          type: object
+          required: [token, user]
+          properties:
+            token:
+              type: string
+              description: JWT Bearer token (expires in 10h, or 30d with rememberMe).
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            user:
+              $ref: "#/components/schemas/AuthUser"

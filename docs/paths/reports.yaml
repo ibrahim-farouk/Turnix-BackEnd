@@ -1,0 +1,101 @@
+# docs/paths/reports.yaml
+# Source of truth: src/modules/reports/report.routes.js (ADMIN only)
+
+/reports:
+  get:
+    tags: [Reports]
+    summary: Get daily performance reports
+    description: |
+      ADMIN only. Returns an aggregated summary plus paginated daily records grouped by queueDate.
+      Filter by exact date (YYYY-MM-DD) or search on the date string.
+    operationId: getReports
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PageParam"
+      - $ref: "#/components/parameters/LimitParam"
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Case-insensitive regex match on the queue date string (e.g. "2026-07").
+      - name: date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Exact queue date filter (YYYY-MM-DD).
+    responses:
+      "200":
+        description: Reports fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportsResponse"
+            example:
+              status: success
+              data:
+                summary: { served: 120, skipped: 8, averageWaitingTime: 14, averageServiceTime: 11 }
+                records:
+                  - { date: "2026-07-30", served: 40, skipped: 3, averageWaitingTime: 12, averageServiceTime: 10 }
+                  - { date: "2026-07-29", served: 38, skipped: 2, averageWaitingTime: 15, averageServiceTime: 12 }
+                pagination: { page: 1, limit: 10, total: 12, totalPages: 2 }
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/reports/export:
+  get:
+    tags: [Reports]
+    summary: Export daily performance records
+    description: |
+      ADMIN only. Returns ALL matching daily records as JSON without pagination.
+      Accepts the same query parameters as /reports; page and limit are validated but ignored.
+    operationId: exportReports
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Case-insensitive regex match on the queue date string.
+      - name: date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Exact queue date filter (YYYY-MM-DD).
+    responses:
+      "200":
+        description: Records exported.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportsExportResponse"
+            example:
+              status: success
+              data:
+                - { date: "2026-07-30", served: 40, skipped: 3, averageWaitingTime: 12, averageServiceTime: 10 }
+                - { date: "2026-07-29", served: 38, skipped: 2, averageWaitingTime: 15, averageServiceTime: 12 }
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

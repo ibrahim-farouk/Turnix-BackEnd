@@ -1,0 +1,31 @@
+# docs/schemas/branch.yaml
+# Source of truth: src/models/branch.model.js, src/modules/branches/branches.service.js
+
+components:
+  schemas:
+    BranchListItem:
+      type: object
+      description: Active branch as returned by the public branches listing.
+      required: [_id, name]
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          description: Unique branch name.
+          example: "Downtown Branch"
+
+    BranchListResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Branches fetched successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchListItem"

@@ -1,0 +1,122 @@
+# docs/schemas/profile.yaml
+# Source of truth: src/modules/profile/profile.mapper.js, src/modules/profile/profile.validator.js
+
+components:
+  schemas:
+    Profile:
+      type: object
+      description: Authenticated user's profile (toProfileResponse mapper).
+      required: [id, fullName, email, phone, role, jobTitle, status, mustChangePassword]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        employeeId:
+          type: string
+          nullable: true
+          example: "EMP-001"
+        fullName:
+          type: string
+          example: "Sara Ali"
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: "^01[0125][0-9]{8}$"
+          example: "01098765432"
+        role:
+          $ref: "#/components/schemas/UserRole"
+        jobTitle:
+          type: string
+          example: "Customer Service Agent"
+        branch:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/BranchRef"
+        service:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ServiceRef"
+        counterNumber:
+          type: integer
+          nullable: true
+          example: 3
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        mustChangePassword:
+          type: boolean
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+        profileImage:
+          type: string
+          format: uri
+          nullable: true
+          description: Absolute URL built from the request host, or null.
+          example: "http://localhost:5000/uploads/profiles/665f...-1722300000000.jpeg"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateProfileRequest:
+      type: object
+      description: All fields optional; only provided fields are updated.
+      properties:
+        fullName:
+          type: string
+          minLength: 3
+          maxLength: 100
+        phone:
+          type: string
+          pattern: "^01[0125][0-9]{8}$"
+          description: Egyptian mobile number. Must be unique.
+        jobTitle:
+          type: string
+          minLength: 2
+          maxLength: 100
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword, confirmPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          minLength: 8
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+        confirmPassword:
+          type: string
+          format: password
+          minLength: 8
+          description: Must match newPassword.
+
+    ProfileResponse:
+      type: object
+      required: [status, message, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+          example: "Profile fetched successfully"
+        data:
+          $ref: "#/components/schemas/Profile"
+
+    ChangePasswordResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+          example: "Password changed successfully"

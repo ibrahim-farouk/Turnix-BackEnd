@@ -1,0 +1,186 @@
+# docs/paths/profile.yaml
+# Source of truth: src/modules/profile/profile.routes.js (any authenticated user)
+
+/profile:
+  get:
+    tags: [Profile]
+    summary: Get my profile
+    description: Returns the authenticated user's profile.
+    operationId: getProfile
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Profile fetched.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileResponse"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "404":
+        description: User not found.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error: { code: USER_NOT_FOUND, message: "User not found." }
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  patch:
+    tags: [Profile]
+    summary: Update my profile
+    description: Partial update of fullName, phone and jobTitle. Phone must be unique (409 otherwise).
+    operationId: updateProfile
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpdateProfileRequest"
+          example:
+            fullName: "Sara Ali"
+            jobTitle: "Senior Customer Service Agent"
+    responses:
+      "200":
+        description: Profile updated.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileResponse"
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "409":
+        description: Phone already used by another user.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            example:
+              status: error
+              error: { code: PHONE_ALREADY_EXISTS, message: "Phone already exists." }
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/profile/change-password:
+  patch:
+    tags: [Profile]
+    summary: Change my password
+    description: Requires the current password. newPassword and confirmPassword must match.
+    operationId: changePassword
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ChangePasswordRequest"
+          example:
+            currentPassword: "OldStrongPass123"
+            newPassword: "NewStrongPass456"
+            confirmPassword: "NewStrongPass456"
+    responses:
+      "200":
+        description: Password changed.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordResponse"
+      "400":
+        description: Validation failed or current password is incorrect.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            examples:
+              wrongPassword:
+                value:
+                  status: error
+                  error: { code: INVALID_PASSWORD, message: "Current password is incorrect." }
+              mismatch:
+                value:
+                  status: error
+                  error:
+                    code: VALIDATION_ERROR
+                    message: "Validation failed"
+                    details:
+                      - { field: "confirmPassword", message: "Passwords do not match." }
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/profile/picture:
+  patch:
+    tags: [Profile]
+    summary: Update my profile picture
+    description: |
+      Multipart upload. Field name: profileImage. Allowed types: jpeg, jpg, png, webp. Max size: 5 MB.
+      The previous image (if any) is deleted from storage.
+    operationId: updateProfilePicture
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [profileImage]
+            properties:
+              profileImage:
+                type: string
+                format: binary
+                description: Image file (jpeg/jpg/png/webp, max 5 MB).
+    responses:
+      "200":
+        description: Profile picture updated.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileResponse"
+      "400":
+        description: No file uploaded, invalid file type, or file too large.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+            examples:
+              fileRequired:
+                value:
+                  status: error
+                  error: { code: FILE_REQUIRED, message: "No file uploaded." }
+              invalidType:
+                value:
+                  status: error
+                  error: { code: INVALID_FILE_TYPE, message: "Only image files are allowed." }
+              tooLarge:
+                value:
+                  status: error
+                  error: { code: FILE_TOO_LARGE, message: "File size must not exceed 5 MB." }
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "429":
+        $ref: "#/components/responses/TooManyRequests"
+      "500":
+        $ref: "#/components/responses/InternalServerError"

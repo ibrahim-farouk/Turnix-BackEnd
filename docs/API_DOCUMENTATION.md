@@ -62,8 +62,15 @@ Access:
 ```json
 {
   "email": "employee@turnix.com",
-  "password": "12345678"
+  "password": "12345678",
+  "rememberMe": false
 }
+
+`rememberMe` اختيارية، والقيمة الافتراضية لها `false`.
+
+- rememberMe = false → JWT expires in 10h
+- rememberMe = true → JWT expires in 30d
+
 ```
 
 ### Response
@@ -77,7 +84,7 @@ Access:
     "user": {
       "id": "USER_ID",
       "employeeId": "EMP-001",
-      "name": "Ahmed Mohamed",
+      "fullName": "Ahmed Mohamed",
       "email": "employee@turnix.com",
       "role": "EMPLOYEE",
       "branch": {
@@ -634,7 +641,7 @@ Access:
       {
         "id": "USER_ID",
         "employeeId": "EMP-001",
-        "name": "Ahmed Mohamed",
+        "fullName": "Ahmed Mohamed",
         "email": "ahmed@turnix.com",
         "phone": "01012345678",
         "branch": {
@@ -673,7 +680,7 @@ Access:
 
 ```json
 {
-  "name": "Ahmed Mohamed",
+  "fullName": "Ahmed Mohamed",
   "email": "ahmed@turnix.com",
   "phone": "01012345678",
   "branchId": "BRANCH_ID",
@@ -694,7 +701,7 @@ Access:
   "data": {
     "id": "USER_ID",
     "employeeId": "EMP-025",
-    "name": "Ahmed Mohamed",
+    "fullName": "Ahmed Mohamed",
     "email": "ahmed@turnix.com",
     "phone": "01012345678",
     "branch": {
@@ -728,7 +735,7 @@ Access:
   "data": {
     "id": "USER_ID",
     "employeeId": "EMP-001",
-    "name": "Ahmed Mohamed",
+    "fullName": "Ahmed Mohamed",
     "email": "ahmed@turnix.com",
     "phone": "01012345678",
     "branch": {
@@ -760,7 +767,7 @@ Access:
 
 ```json
 {
-  "name": "Ahmed Mohamed",
+  "fullName": "Ahmed Mohamed",
   "email": "newemail@turnix.com",
   "phone": "01098765432",
   "branchId": "BRANCH_ID",
@@ -773,7 +780,7 @@ Access:
 
 ```json
 {
-  "name": "Ahmed Mohamed",
+  "fullName": "Ahmed Mohamed",
   "email": "newemail@turnix.com",
   "phone": "01098765432",
   "branchId": "BRANCH_ID",
@@ -825,7 +832,7 @@ Access:
   "success": true,
   "data": {
     "employeeId": "EMP-001",
-    "name": "Ahmed Mohamed",
+    "fullName": "Ahmed Mohamed",
     "jobTitle": "Customer Service Agent",
     "email": "ahmed@turnix.com",
     "phone": "01012345678",
@@ -867,7 +874,7 @@ Access:
 
 ```json
 {
-  "name": "Ahmed Mohamed",
+  "fullName": "Ahmed Mohamed",
   "phone": "01098765432"
 }
 ```
@@ -1005,6 +1012,8 @@ Access:
 أمثلة:
 
 ```text
+fullName
+rememberMe
 customerName
 customerPhone
 ticketNumber
