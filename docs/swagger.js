@@ -1,5 +1,13 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import swaggerJsdoc from "swagger-jsdoc";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// glob (used internally by swagger-jsdoc) requires forward slashes; path.resolve/join
+// return backslash-separated paths on Windows, which silently match zero files.
+const toGlobPattern = (...segments) =>
+    path.join(__dirname, ...segments).split(path.sep).join("/");
 
 const options = {
     definition: {
@@ -54,8 +62,8 @@ const options = {
     },
 
     apis: [
-        path.resolve("docs/schemas/*.yaml"),
-        path.resolve("docs/paths/*.yaml"),
+        toGlobPattern("schemas/*.yaml"),
+        toGlobPattern("paths/*.yaml"),
     ],
 };
 

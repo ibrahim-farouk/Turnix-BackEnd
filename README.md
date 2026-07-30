@@ -1,5 +1,10 @@
 # 🚀 Turnix — Smart Queue Management System (Backend)
 
+![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/express-4.x-000000?logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/mongodb-8.x-47A248?logo=mongodb&logoColor=white)
+![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?logo=openapiinitiative&logoColor=white)
+
 Turnix is a production-ready REST API for managing walk-in queues. Customers join a queue online **without creating an account**, track their turn in real time, while employees manage the daily queue from a dedicated workspace and admins control staff, settings, and performance reports.
 
 ---
@@ -25,6 +30,8 @@ Turnix is a production-ready REST API for managing walk-in queues. Customers joi
 | Uploads | Multer (5 MB, jpeg/jpg/png/webp) |
 | API Docs | OpenAPI 3.0 (swagger-jsdoc + swagger-ui-express) |
 
+> `socket.io` is listed as a dependency but is **not wired up yet** — live queue updates currently rely on Frontend polling (see [API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)).
+
 ## 🏗 Architecture
 
 Modular architecture with a strict layering per module:
@@ -49,7 +56,7 @@ src/
     ├── branches/           # GET /branches (public)
     ├── services/           # GET /branches/:branchId/services (public)
     ├── tickets/            # POST /tickets, GET /tickets/:id/track (public, guest token)
-    ├── workspace/          # GET /workspace + call/complete/skip/cancel (EMPLOYEE)
+    ├── workspace/          # GET /workspace (EMPLOYEE + ADMIN), call/complete/skip/cancel (EMPLOYEE)
     ├── employees/          # CRUD + reset-password (ADMIN)
     ├── profile/            # profile, change-password, picture (authenticated)
     ├── settings/           # GET/PATCH /settings (ADMIN)

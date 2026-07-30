@@ -1,19 +1,10 @@
-<div dir="rtl" align="right">
-
 # Turnix – API Documentation
 
 ## MVP API Contract
 
-هذا الملف هو الـAPI Contract بين الـFrontend والـBackend في Turnix MVP.
+This file is the API contract between the Frontend and the Backend for the Turnix MVP.
 
-أي تغيير في:
-- Endpoint
-- Request Body
-- Response Structure
-- Field Name
-- Status
-
-يجب الاتفاق عليه بين الـFrontend والـBackend قبل تنفيذه.
+It is generated from, and kept in sync with, the interactive OpenAPI spec at `GET /api/docs` (source files: [`docs/paths/`](paths) and [`docs/schemas/`](schemas)). Any change to an endpoint, request body, response structure, field name, or status code must be agreed between Frontend and Backend before being implemented — update the YAML spec first, this document second.
 
 Base URL:
 
@@ -23,9 +14,9 @@ Base URL:
 
 # 1. General Response Format
 
-جميع الـResponses تتبع نفس الشكل.
+Responses use one of two envelopes depending on the module.
 
-## Success
+## Success (most modules: auth, branches, services, tickets, workspace, employees)
 
 ```json
 {
@@ -35,15 +26,30 @@ Base URL:
 }
 ```
 
-## Error
+## Success (profile, settings, reports)
 
 ```json
 {
-  "success": false,
-  "message": "Something went wrong",
-  "errors": []
+  "status": "success",
+  "message": "Operation completed successfully",
+  "data": {}
 }
 ```
+
+## Error (all modules)
+
+```json
+{
+  "status": "error",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Something went wrong",
+    "details": []
+  }
+}
+```
+
+`details` is only present for `VALIDATION_ERROR` responses and contains `{ field, message }` entries.
 
 ---
 
@@ -54,8 +60,7 @@ Base URL:
 `POST /api/auth/login`
 
 Access:
-- ADMIN
-- EMPLOYEE
+- Public
 
 ### Request
 
@@ -65,13 +70,14 @@ Access:
   "password": "12345678",
   "rememberMe": false
 }
-
-`rememberMe` اختيارية، والقيمة الافتراضية لها `false`.
-
-- rememberMe = false → JWT expires in 10h
-- rememberMe = true → JWT expires in 30d
-
 ```
+
+`rememberMe` is optional, default `false`.
+
+- `rememberMe = false` → JWT expires in 10h
+- `rememberMe = true` → JWT expires in 30d
+
+Inactive accounts (`status: INACTIVE`) are rejected with `403`.
 
 ### Response
 
@@ -101,15 +107,18 @@ Access:
 }
 ```
 
-بالنسبة للـAdmin:
+For an Admin:
 
 ```json
 {
-  "role": "ADMIN"
+  "role": "ADMIN",
+  "branch": null,
+  "service": null,
+  "counterNumber": null
 }
 ```
 
-الـAdmin غير مرتبط بـBranch أو Service محددة.
+Admins are not tied to a specific branch or service.
 
 ---
 
@@ -121,27 +130,21 @@ Access:
 
 Access:
 - Public
-- ADMIN
 
 ### Response
 
 ```json
 {
   "success": true,
+  "message": "Branches fetched successfully",
   "data": [
-    {
-      "id": "BRANCH_ID_1",
-      "name": "Mansoura"
-    },
-    {
-      "id": "BRANCH_ID_2",
-      "name": "Cairo"
-    }
+    { "_id": "BRANCH_ID_1", "name": "Mansoura" },
+    { "_id": "BRANCH_ID_2", "name": "Cairo" }
   ]
 }
 ```
 
-لا يوجد Add / Edit / Delete Branch في الـMVP.
+Only active branches are returned. There is no Add / Edit / Delete Branch endpoint in the MVP.
 
 ---
 
@@ -153,7 +156,6 @@ Access:
 
 Access:
 - Public
-- ADMIN
 
 ### Response
 
@@ -161,26 +163,14 @@ Access:
 {
   "success": true,
   "data": [
-    {
-      "id": "SERVICE_ID_1",
-      "name": "Dentistry",
-      "prefix": "A"
-    },
-    {
-      "id": "SERVICE_ID_2",
-      "name": "Internal Medicine",
-      "prefix": "B"
-    },
-    {
-      "id": "SERVICE_ID_3",
-      "name": "ENT",
-      "prefix": "C"
-    }
+    { "_id": "SERVICE_ID_1", "name": "Dentistry", "prefix": "A" },
+    { "_id": "SERVICE_ID_2", "name": "Internal Medicine", "prefix": "B" },
+    { "_id": "SERVICE_ID_3", "name": "ENT", "prefix": "C" }
   ]
 }
 ```
 
-مثال الـServices:
+Example services:
 
 - Dentistry → A
 - Internal Medicine → B
@@ -188,13 +178,11 @@ Access:
 - Ophthalmology → D
 - Pediatrics → E
 
-لا يوجد Add / Edit / Delete Service في الـMVP.
+Returns an empty array if the branch has no active services or does not exist. There is no Add / Edit / Delete Service endpoint in the MVP.
 
 ---
 
-# 5. Join Queue
-
-## Create Ticket
+# 5. Join Queue (Create Ticket)
 
 `POST /api/tickets`
 
@@ -212,6 +200,8 @@ Access:
 }
 ```
 
+`customerPhone` must be a valid Egyptian mobile number.
+
 ### Response
 
 ```json
@@ -219,32 +209,29 @@ Access:
   "success": true,
   "message": "Ticket created successfully",
   "data": {
-    "ticketId": "TICKET_ID",
-    "ticketNumber": "A103",
-    "status": "WAITING",
-    "queuePosition": 3,
-    "peopleAhead": 2,
-    "estimatedWait": 30,
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
+    "ticket": {
+      "id": "TICKET_ID",
+      "ticketNumber": "A103",
+      "status": "WAITING",
+      "queuePosition": 3,
+      "peopleAhead": 2,
+      "estimatedWait": 30,
+      "branch": { "id": "BRANCH_ID", "name": "Mansoura" },
+      "service": { "id": "SERVICE_ID", "name": "Dentistry" },
+      "joinedAt": "2026-07-24T14:20:00Z"
     },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    },
-    "joinedAt": "2026-07-24T14:20:00Z"
+    "guestToken": "3f9d1c0a8b7e6d5c4b3a29181716151413121110ffeeddccbbaa998877665544"
   }
 }
 ```
 
-الـTicket Number يتم إنشاؤه من الـBackend.
+`guestToken` is a 64-character token returned **only once**, right when the ticket is created. The frontend must store it (e.g. `localStorage`) — it is required as the `X-Guest-Token` header to track the ticket later (see section 7). It is never returned again by any other endpoint.
 
-كل Queue مستقلة حسب:
+The ticket number is generated by the backend. Each queue is independent per:
 
 `Branch + Service`
 
-مثال:
+Example:
 
 ```text
 Mansoura + Dentistry
@@ -258,17 +245,13 @@ A103
 
 # 6. Queue Calculation
 
-الـBackend هو المسؤول بالكامل عن حساب:
+The backend is fully responsible for computing:
 
 - Queue Position
 - People Ahead
 - Estimated Wait
 
-الحساب يتم داخل نفس:
-
-`Branch + Service`
-
-ولا يتم احتساب Tickets الخاصة بـServices أخرى.
+The calculation is scoped to the same `Branch + Service` and to the current day (Africa/Cairo timezone) — tickets from other services, or from previous days, are never counted.
 
 ## Estimated Wait
 
@@ -276,9 +259,7 @@ A103
 Estimated Wait = People Ahead × Default Service Time
 ```
 
-مثال إذا كان:
-
-`Default Service Time = 15 minutes`
+Example with `Default Service Time = 15 minutes`:
 
 ```text
 A101 → People Ahead: 0 → Estimated Wait: 0
@@ -287,7 +268,7 @@ A103 → People Ahead: 2 → Estimated Wait: 30
 A104 → People Ahead: 3 → Estimated Wait: 45
 ```
 
-الـFrontend لا يقوم بهذه الحسابات.
+The frontend never performs this calculation itself.
 
 ---
 
@@ -298,9 +279,18 @@ A104 → People Ahead: 3 → Estimated Wait: 45
 `GET /api/tickets/:ticketId/track`
 
 Access:
-- Public
+- Public, secured by the `X-Guest-Token` header
 
-يستخدم الـFrontend هذا Endpoint في Polling كل 5–10 ثوانٍ.
+### Request headers
+
+```text
+X-Guest-Token: <the guestToken returned when the ticket was created>
+```
+
+- Missing header → `401 UNAUTHORIZED`
+- Header does not match this ticket → `403 FORBIDDEN`
+
+The frontend polls this endpoint every 5–10 seconds.
 
 ### Response – WAITING
 
@@ -308,7 +298,7 @@ Access:
 {
   "success": true,
   "data": {
-    "ticketId": "TICKET_ID",
+    "id": "TICKET_ID",
     "ticketNumber": "A103",
     "status": "WAITING",
     "queuePosition": 3,
@@ -316,14 +306,9 @@ Access:
     "estimatedWait": 30,
     "currentServing": "A101",
     "counterNumber": null,
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
-    },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    }
+    "branch": { "id": "BRANCH_ID", "name": "Mansoura" },
+    "service": { "id": "SERVICE_ID", "name": "Dentistry" },
+    "joinedAt": "2026-07-24T14:10:00Z"
   }
 }
 ```
@@ -334,7 +319,7 @@ Access:
 {
   "success": true,
   "data": {
-    "ticketId": "TICKET_ID",
+    "id": "TICKET_ID",
     "ticketNumber": "A103",
     "status": "SERVING",
     "queuePosition": 0,
@@ -342,31 +327,28 @@ Access:
     "estimatedWait": 0,
     "currentServing": "A103",
     "counterNumber": 3,
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
-    },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    }
+    "branch": { "id": "BRANCH_ID", "name": "Mansoura" },
+    "service": { "id": "SERVICE_ID", "name": "Dentistry" },
+    "joinedAt": "2026-07-24T14:10:00Z"
   }
 }
 ```
 
-عند:
+Once the ticket reaches:
 
 - COMPLETED
 - SKIPPED
 - CANCELLED
 
-الـFrontend يوقف Polling.
+`queuePosition` becomes `null` and the frontend stops polling.
+
+There is no separate "ticket details" endpoint for customers — tracking is the only way a guest can read ticket data.
 
 ---
 
 # 8. Ticket Status
 
-الـStatus المسموحة فقط:
+The only allowed statuses:
 
 ```text
 WAITING
@@ -376,59 +358,49 @@ SKIPPED
 CANCELLED
 ```
 
-الـTransitions المسموحة:
+Allowed transitions:
 
 ```text
-WAITING
-   ↓
-SERVING
-   ↓
-COMPLETED
+WAITING → SERVING → COMPLETED
 ```
 
-ومن SERVING يمكن أيضاً:
+From SERVING it can also become:
 
 ```text
 SERVING → SKIPPED
 SERVING → CANCELLED
 ```
 
-`Almost Your Turn` ليست Backend Status.
+`Almost Your Turn` is a UI-only state, not a backend status.
 
 ---
 
-# 9. Workspace – Employee
+# 9. Workspace
 
-## Get Employee Workspace
+## Get Workspace
 
 `GET /api/workspace`
 
 Access:
 - EMPLOYEE
+- ADMIN
 
-الـBackend يحدد تلقائياً:
+Behavior depends on the role:
 
-- Branch
-- Service
+- **EMPLOYEE**: the backend uses the employee's own assigned branch and service. Any `branchId` / `serviceId` query params are ignored.
+- **ADMIN**: `branchId` and `serviceId` query params are **required**. Missing either one returns `400 VALIDATION_ERROR`.
 
-من المستخدم المسجل.
+`GET /api/workspace?branchId=BRANCH_ID&serviceId=SERVICE_ID`
 
-الـFrontend لا يرسل `branchId` أو `serviceId`.
-
-### Response
+### Response (same shape for Employee and Admin)
 
 ```json
 {
   "success": true,
+  "message": "Workspace fetched successfully",
   "data": {
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
-    },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    },
+    "branch": { "id": "BRANCH_ID", "name": "Mansoura" },
+    "service": { "id": "SERVICE_ID", "name": "Dentistry" },
     "statistics": {
       "waiting": 4,
       "serving": 1,
@@ -440,94 +412,45 @@ Access:
       "ticketNumber": "A101",
       "customerName": "Ahmed Ali",
       "customerPhone": "01012345678",
-      "joinedAt": "2026-07-24T14:00:00Z",
+      "counterNumber": 3,
+      "calledAt": "2026-07-24T14:00:00Z",
       "status": "SERVING",
-      "counterNumber": 3
+      "service": { "id": "SERVICE_ID", "name": "Dentistry" },
+      "joinedAt": "2026-07-24T13:45:00Z"
     },
     "waitingQueue": [
       {
-        "id": "TICKET_ID",
+        "id": "TICKET_ID_2",
         "ticketNumber": "A102",
         "customerName": "Mohamed Ali",
         "customerPhone": "01098765432",
+        "status": "WAITING",
+        "service": { "id": "SERVICE_ID", "name": "Dentistry" },
         "queuePosition": 1,
+        "peopleAhead": 0,
         "estimatedWait": 15,
-        "joinedAt": "2026-07-24T14:10:00Z",
-        "status": "WAITING"
+        "joinedAt": "2026-07-24T14:10:00Z"
       }
     ]
   }
 }
 ```
 
----
+`currentServing` is `null` when nobody is currently being served. `waitingQueue` items already contain everything needed for the "Ticket Details" view-only modal — there is no separate endpoint to fetch a single ticket's details.
 
-# 10. Workspace – Admin
-
-## Get Admin Workspace
-
-`GET /api/admin/workspace?branchId=BRANCH_ID&serviceId=SERVICE_ID`
-
-Access:
-- ADMIN
-
-الـAdmin يحدد Branch وService من الـFrontend.
-
-### Response
-
-نفس Structure الخاص بـEmployee Workspace.
-
-الفرق أن الـAdmin يستطيع اختيار أي Branch وأي Service.
+`statistics.avgWait` is the average time between `joinedAt` and `calledAt`, in minutes, for today's queue.
 
 ---
 
-# 11. Ticket Details
+# 10. Workspace Actions
 
-## Get Ticket Details
+All action endpoints are under `/workspace/tickets/:ticketId/...`, EMPLOYEE only (`403` for ADMIN), and require the employee to be assigned to a branch, service and counter number.
 
-`GET /api/tickets/:ticketId`
+## Call Customer
 
-Access:
-- ADMIN
-- EMPLOYEE
+`PATCH /api/workspace/tickets/:ticketId/call`
 
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "TICKET_ID",
-    "ticketNumber": "A102",
-    "customerName": "Mohamed Ali",
-    "customerPhone": "01012345678",
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
-    },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    },
-    "joinedAt": "2026-07-24T14:10:00Z",
-    "queuePosition": 1,
-    "estimatedWait": 15,
-    "status": "WAITING"
-  }
-}
-```
-
-الـEmployee لا يستطيع الحصول على Ticket خارج الـBranch والـService الخاصين به.
-
----
-
-# 12. Call Customer
-
-`PATCH /api/tickets/:ticketId/call`
-
-Access:
-- ADMIN
-- EMPLOYEE
+`WAITING → SERVING`. Fails with `409 CONFLICT` if the ticket is not `WAITING`, or if another ticket is already `SERVING` in the same queue.
 
 ### Response
 
@@ -536,27 +459,22 @@ Access:
   "success": true,
   "message": "Customer called successfully",
   "data": {
-    "id": "TICKET_ID",
-    "ticketNumber": "A102",
-    "status": "SERVING",
-    "counterNumber": 3
+    "ticket": {
+      "id": "TICKET_ID",
+      "ticketNumber": "A102",
+      "status": "SERVING",
+      "counterNumber": 3,
+      "calledAt": "2026-07-24T14:15:00Z"
+    }
   }
 }
 ```
 
-الـEmployee لا يستطيع Call Ticket خارج الـQueue الخاصة به.
+## Complete Service
 
-ولا يستطيع Call Customer جديد إذا كان لديه Ticket حالياً في حالة `SERVING`.
+`PATCH /api/workspace/tickets/:ticketId/complete`
 
----
-
-# 13. Complete Service
-
-`PATCH /api/tickets/:ticketId/complete`
-
-Access:
-- ADMIN
-- EMPLOYEE
+`SERVING → COMPLETED`. The ticket must be `SERVING` and must have been called by the same employee, otherwise `403`. Only serving tickets can be completed (`409` otherwise).
 
 ### Response
 
@@ -565,22 +483,21 @@ Access:
   "success": true,
   "message": "Service completed successfully",
   "data": {
-    "id": "TICKET_ID",
-    "ticketNumber": "A102",
-    "status": "COMPLETED"
+    "ticket": {
+      "id": "TICKET_ID",
+      "ticketNumber": "A102",
+      "status": "COMPLETED",
+      "completedAt": "2026-07-24T14:30:00Z"
+    }
   }
 }
 ```
 
----
+## Skip Customer
 
-# 14. Skip Customer
+`PATCH /api/workspace/tickets/:ticketId/skip`
 
-`PATCH /api/tickets/:ticketId/skip`
-
-Access:
-- ADMIN
-- EMPLOYEE
+`SERVING → SKIPPED`. Same ownership rules as Complete.
 
 ### Response
 
@@ -589,98 +506,93 @@ Access:
   "success": true,
   "message": "Customer skipped successfully",
   "data": {
-    "id": "TICKET_ID",
-    "ticketNumber": "A102",
-    "status": "SKIPPED"
-  }
-}
-```
-
----
-
-# 15. Cancel Ticket
-
-`PATCH /api/tickets/:ticketId/cancel`
-
-Access:
-- ADMIN
-- EMPLOYEE
-
-### Response
-
-```json
-{
-  "success": true,
-  "message": "Ticket cancelled successfully",
-  "data": {
-    "id": "TICKET_ID",
-    "ticketNumber": "A102",
-    "status": "CANCELLED"
-  }
-}
-```
-
----
-
-# 16. Employees
-
-## Get Employees
-
-`GET /api/employees?page=1&limit=10&search=&status=&branchId=&serviceId=`
-
-Access:
-- ADMIN
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "employees": [
-      {
-        "id": "USER_ID",
-        "employeeId": "EMP-001",
-        "fullName": "Ahmed Mohamed",
-        "email": "ahmed@turnix.com",
-        "phone": "01012345678",
-        "branch": {
-          "id": "BRANCH_ID",
-          "name": "Mansoura"
-        },
-        "service": {
-          "id": "SERVICE_ID",
-          "name": "Dentistry"
-        },
-        "counterNumber": 3,
-        "status": "ACTIVE",
-        "lastLogin": "2026-07-24T12:30:00Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 24,
-      "totalPages": 3
+    "ticket": {
+      "id": "TICKET_ID",
+      "ticketNumber": "A102",
+      "status": "SKIPPED"
     }
   }
 }
 ```
 
+## Cancel Ticket
+
+`PATCH /api/workspace/tickets/:ticketId/cancel`
+
+`SERVING → CANCELLED`. Same ownership rules as Complete.
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Service cancelled successfully",
+  "data": {
+    "ticket": {
+      "id": "TICKET_ID",
+      "ticketNumber": "A102",
+      "status": "CANCELLED"
+    }
+  }
+}
+```
+
+An employee can never call, complete, skip, or cancel a ticket outside their own `Branch + Service` queue, and cannot call a new customer while they already have a `SERVING` ticket — Complete, Skip or Cancel must happen first.
+
 ---
 
-# 17. Add Employee
+# 11. Employees
+
+All endpoints below are ADMIN only.
+
+## Get Employees
+
+`GET /api/employees?page=1&limit=10&search=&branch=&status=`
+
+- `search` — case-insensitive match on `fullName` or `employeeId`.
+- `branch` — filter by branch ID.
+- `status` — `ACTIVE` or `INACTIVE`.
+
+There is no `serviceId` filter on this endpoint.
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Employees fetched successfully",
+  "data": {
+    "employees": [
+      {
+        "_id": "USER_ID",
+        "employeeId": "EMP-001",
+        "fullName": "Ahmed Mohamed",
+        "email": "ahmed@turnix.com",
+        "phone": "01012345678",
+        "jobTitle": "Customer Service Agent",
+        "role": "EMPLOYEE",
+        "branch": { "_id": "BRANCH_ID", "name": "Mansoura" },
+        "service": { "_id": "SERVICE_ID", "name": "Dentistry" },
+        "counterNumber": 3,
+        "status": "ACTIVE",
+        "lastLogin": "2026-07-24T12:30:00Z"
+      }
+    ],
+    "pagination": { "page": 1, "limit": 10, "total": 24, "totalPages": 3 }
+  }
+}
+```
+
+## Add Employee
 
 `POST /api/employees`
-
-Access:
-- ADMIN
 
 ### Request
 
 ```json
 {
   "fullName": "Ahmed Mohamed",
+  "jobTitle": "Customer Service Agent",
   "email": "ahmed@turnix.com",
   "phone": "01012345678",
   "branchId": "BRANCH_ID",
@@ -690,62 +602,48 @@ Access:
 }
 ```
 
-`confirmPassword` لا يتم إرساله للـBackend.
+All fields are required. `confirmPassword` is a frontend-only check and is never sent to the backend. The branch must exist and be active, the service must belong to that branch, and the `branch + service` pair must not already have an active employee assigned (`409 CONFLICT`).
 
 ### Response
 
 ```json
 {
   "success": true,
-  "message": "Employee added successfully",
+  "message": "Employee created successfully",
   "data": {
-    "id": "USER_ID",
+    "_id": "USER_ID",
     "employeeId": "EMP-025",
     "fullName": "Ahmed Mohamed",
     "email": "ahmed@turnix.com",
     "phone": "01012345678",
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
-    },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    },
+    "jobTitle": "Customer Service Agent",
+    "branch": { "_id": "BRANCH_ID", "name": "Mansoura" },
+    "service": { "_id": "SERVICE_ID", "name": "Dentistry" },
     "counterNumber": 3,
     "status": "ACTIVE"
   }
 }
 ```
 
----
+## View Employee
 
-# 18. View Employee
-
-`GET /api/employees/:employeeId`
-
-Access:
-- ADMIN
+`GET /api/employees/:id`
 
 ### Response
 
 ```json
 {
   "success": true,
+  "message": "Employee fetched successfully",
   "data": {
-    "id": "USER_ID",
+    "_id": "USER_ID",
     "employeeId": "EMP-001",
     "fullName": "Ahmed Mohamed",
     "email": "ahmed@turnix.com",
     "phone": "01012345678",
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
-    },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    },
+    "jobTitle": "Customer Service Agent",
+    "branch": { "_id": "BRANCH_ID", "name": "Mansoura" },
+    "service": { "_id": "SERVICE_ID", "name": "Dentistry" },
     "counterNumber": 3,
     "status": "ACTIVE",
     "lastLogin": "2026-07-24T12:30:00Z",
@@ -754,194 +652,194 @@ Access:
 }
 ```
 
----
+## Edit Employee
 
-# 19. Edit Employee
+`PATCH /api/employees/:id`
 
-`PATCH /api/employees/:employeeId`
+### Request (all fields optional, only provided fields are updated)
 
-Access:
-- ADMIN
+```json
+{
+  "fullName": "Ahmed Mohamed",
+  "phone": "01098765432",
+  "branchId": "BRANCH_ID",
+  "serviceId": "SERVICE_ID",
+  "counterNumber": 4,
+  "status": "ACTIVE"
+}
+```
+
+`email`, `jobTitle` and password are **not editable** through this endpoint. Changing `branchId`/`serviceId` re-validates that the branch is active, the service belongs to it, and the pair isn't already assigned to another active employee (`409` otherwise). To reset a password, use the dedicated endpoint below.
+
+### Response
+
+Same shape as View Employee, with the updated fields.
+
+## Reset Employee Password
+
+`PATCH /api/employees/:id/reset-password`
 
 ### Request
 
 ```json
 {
-  "fullName": "Ahmed Mohamed",
-  "email": "newemail@turnix.com",
-  "phone": "01098765432",
-  "branchId": "BRANCH_ID",
-  "serviceId": "SERVICE_ID",
-  "counterNumber": 4
-}
-```
-
-إذا أراد الـAdmin Reset Password:
-
-```json
-{
-  "fullName": "Ahmed Mohamed",
-  "email": "newemail@turnix.com",
-  "phone": "01098765432",
-  "branchId": "BRANCH_ID",
-  "serviceId": "SERVICE_ID",
-  "counterNumber": 4,
   "newPassword": "newPassword123"
 }
 ```
 
-إذا لم يتم إرسال `newPassword` لا يتم تغيير Password.
-
----
-
-# 20. Remove Employee
-
-`DELETE /api/employees/:employeeId`
-
-Access:
-- ADMIN
-
-الـBackend يقوم بتعطيل الحساب بدلاً من Hard Delete.
+Sets a new password for the employee and flags `mustChangePassword: true`.
 
 ### Response
 
 ```json
 {
   "success": true,
-  "message": "Employee removed successfully",
-  "data": null
+  "message": "Password reset successfully"
+}
+```
+
+## Deactivate Employee
+
+`DELETE /api/employees/:id`
+
+The backend deactivates the account (`status: INACTIVE`) instead of a hard delete — the employee can no longer log in, but the document is kept.
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Employee deleted successfully",
+  "data": {
+    "_id": "USER_ID",
+    "employeeId": "EMP-002",
+    "fullName": "Ahmed Mohamed",
+    "email": "ahmed@turnix.com",
+    "phone": "01012345678",
+    "jobTitle": "Customer Service Agent",
+    "role": "EMPLOYEE",
+    "status": "INACTIVE"
+  }
 }
 ```
 
 ---
 
-# 21. Profile
+# 12. Profile
+
+Accessible to any authenticated user (ADMIN or EMPLOYEE).
 
 ## Get Profile
 
 `GET /api/profile`
 
-Access:
-- ADMIN
-- EMPLOYEE
-
 ### Response – Employee
 
 ```json
 {
-  "success": true,
+  "status": "success",
+  "message": "Profile fetched successfully",
   "data": {
+    "id": "USER_ID",
     "employeeId": "EMP-001",
     "fullName": "Ahmed Mohamed",
     "jobTitle": "Customer Service Agent",
     "email": "ahmed@turnix.com",
     "phone": "01012345678",
-    "branch": {
-      "id": "BRANCH_ID",
-      "name": "Mansoura"
-    },
-    "service": {
-      "id": "SERVICE_ID",
-      "name": "Dentistry"
-    },
+    "branch": { "id": "BRANCH_ID", "name": "Mansoura" },
+    "service": { "id": "SERVICE_ID", "name": "Dentistry" },
+    "counterNumber": 3,
     "role": "EMPLOYEE",
-    "lastLogin": "2026-07-24T12:30:00Z"
+    "status": "ACTIVE",
+    "mustChangePassword": false,
+    "lastLogin": "2026-07-24T12:30:00Z",
+    "profileImage": "http://localhost:5000/uploads/profiles/665f...-1722300000000.jpeg"
   }
 }
 ```
 
-بالنسبة للـAdmin يمكن أن تكون:
+For an Admin, `branch`, `service` and `counterNumber` are `null` and `role` is `"ADMIN"`.
 
-```json
-{
-  "branch": null,
-  "service": null,
-  "role": "ADMIN"
-}
-```
-
----
-
-# 22. Update Profile
+## Update Profile
 
 `PATCH /api/profile`
 
-Access:
-- ADMIN
-- EMPLOYEE
-
-### Request
+### Request (all fields optional)
 
 ```json
 {
   "fullName": "Ahmed Mohamed",
-  "phone": "01098765432"
+  "phone": "01098765432",
+  "jobTitle": "Senior Customer Service Agent"
 }
 ```
 
----
+`phone` must be unique — returns `409 CONFLICT` (`PHONE_ALREADY_EXISTS`) otherwise. `email` is not editable from Profile.
 
-# 23. Change Password
+## Change Password
 
-`PATCH /api/profile/password`
-
-Access:
-- ADMIN
-- EMPLOYEE
+`PATCH /api/profile/change-password`
 
 ### Request
 
 ```json
 {
   "currentPassword": "oldPassword",
-  "newPassword": "newPassword123"
+  "newPassword": "newPassword123",
+  "confirmPassword": "newPassword123"
 }
 ```
 
-`confirmPassword` يتم التحقق منه في الـFrontend ولا يحتاج للإرسال.
+`confirmPassword` **is required in the request body** and is validated by the backend (must match `newPassword`). Wrong `currentPassword` returns `400` with code `INVALID_PASSWORD`.
 
 ### Response
 
 ```json
 {
-  "success": true,
-  "message": "Password updated successfully",
-  "data": null
+  "status": "success",
+  "message": "Password changed successfully"
 }
 ```
 
+## Update Profile Picture
+
+`PATCH /api/profile/picture`
+
+Multipart upload (`multipart/form-data`), field name `profileImage`. Allowed types: jpeg, jpg, png, webp. Max size: 5 MB. The previous image, if any, is deleted from storage.
+
+### Response
+
+Same shape as Get Profile, with the updated `profileImage` URL.
+
 ---
 
-# 24. Settings
+# 13. Settings
+
+ADMIN only. Settings are a single global document, auto-created with defaults on first access.
 
 ## Get Settings
 
 `GET /api/settings`
 
-Access:
-- ADMIN
-
 ### Response
 
 ```json
 {
-  "success": true,
+  "status": "success",
   "data": {
-    "defaultServiceTime": 15
+    "_id": "SETTINGS_ID",
+    "defaultServiceTime": 15,
+    "createdAt": "2026-07-24T00:00:00Z",
+    "updatedAt": "2026-07-24T00:00:00Z"
   }
 }
 ```
 
-`defaultServiceTime` بالدقائق.
-
----
+`defaultServiceTime` is in minutes.
 
 ## Update Settings
 
 `PATCH /api/settings`
-
-Access:
-- ADMIN
 
 ### Request
 
@@ -955,61 +853,86 @@ Access:
 
 ```json
 {
-  "success": true,
+  "status": "success",
   "message": "Settings updated successfully",
   "data": {
-    "defaultServiceTime": 10
+    "_id": "SETTINGS_ID",
+    "defaultServiceTime": 10,
+    "createdAt": "2026-07-24T00:00:00Z",
+    "updatedAt": "2026-07-24T15:00:00Z"
   }
 }
 ```
 
-القيمة الجديدة تستخدم في حساب Estimated Wait.
+The new value is used immediately in the Estimated Wait calculation for all branches and services (it is a global setting in the MVP — there is no per-branch or per-service override).
 
 ---
 
-# 25. Reports
+# 14. Reports
 
-`GET /api/reports?branchId=&serviceId=&date=2026-07-24`
+ADMIN only. Reports are global — there is currently **no branch or service filter**, only date-based filtering.
 
-Access:
-- ADMIN
+## Get Reports
 
-يمكن عدم إرسال `branchId` أو `serviceId` للحصول على البيانات لجميع الفروع أو الخدمات.
+`GET /api/reports?page=1&limit=10&search=&date=2026-07-24`
+
+- `date` — exact queue date filter, `YYYY-MM-DD`.
+- `search` — case-insensitive match on the date string (e.g. `"2026-07"`).
+- Omit both to get a paginated list of all daily records.
 
 ### Response
 
 ```json
 {
-  "success": true,
+  "status": "success",
   "data": {
-    "statistics": {
-      "customersServed": 142,
-      "averageWaitTime": 12,
-      "averageServiceTime": 8,
-      "skippedTickets": 6
+    "summary": {
+      "served": 142,
+      "skipped": 6,
+      "averageWaitingTime": 12,
+      "averageServiceTime": 8
     },
     "records": [
       {
         "date": "2026-07-24",
         "served": 42,
-        "averageWait": 11,
-        "averageService": 8,
-        "skipped": 2
+        "skipped": 2,
+        "averageWaitingTime": 11,
+        "averageServiceTime": 8
       }
-    ]
+    ],
+    "pagination": { "page": 1, "limit": 10, "total": 12, "totalPages": 2 }
   }
 }
 ```
 
-جميع قيم الوقت بالدقائق.
+`summary` is aggregated over all records matching the current filters (not just the current page). `served` counts `COMPLETED` tickets; `skipped` counts `SKIPPED` tickets. All time values are in minutes.
+
+## Export Reports
+
+`GET /api/reports/export?search=&date=2026-07-24`
+
+Same filters as Get Reports (`page`/`limit` are accepted but ignored). Returns **all** matching daily records as a flat JSON array, without pagination — intended for a "download as file" action on the frontend.
+
+### Response
+
+```json
+{
+  "status": "success",
+  "data": [
+    { "date": "2026-07-24", "served": 42, "skipped": 2, "averageWaitingTime": 11, "averageServiceTime": 8 },
+    { "date": "2026-07-23", "served": 38, "skipped": 3, "averageWaitingTime": 14, "averageServiceTime": 9 }
+  ]
+}
+```
 
 ---
 
-# 26. Naming Convention
+# 15. Naming Convention
 
-جميع JSON Fields تستخدم `camelCase`.
+All JSON fields use `camelCase`.
 
-أمثلة:
+Examples:
 
 ```text
 fullName
@@ -1031,9 +954,11 @@ joinedAt
 createdAt
 ```
 
+Note: Mongoose documents returned as-is (branches, services, employees) use `_id`; hand-mapped response objects (auth user, tickets, workspace, profile) use `id`.
+
 ---
 
-# 27. Enums
+# 16. Enums
 
 ## User Roles
 
@@ -1059,13 +984,11 @@ SKIPPED
 CANCELLED
 ```
 
-لا يتم استخدام قيم مختلفة في الـFrontend والـBackend.
+The same values are used on the Frontend and the Backend.
 
 ---
 
-# 28. HTTP Status Codes
-
-يتم استخدام الـHTTP Status Codes بشكل ثابت:
+# 17. HTTP Status Codes
 
 ```text
 200 → Request successful
@@ -1074,112 +997,114 @@ CANCELLED
 401 → Not authenticated
 403 → Not allowed
 404 → Resource not found
-409 → Conflict مثل Email مستخدم مسبقاً
+409 → Conflict (e.g. email already used, ticket already serving)
+429 → Too many requests (rate limit)
 500 → Server Error
 ```
 
 ---
 
-# 29. Date & Time
+# 18. Date & Time
 
-جميع الـDate/Time values القادمة من الـBackend تكون بصيغة ISO 8601.
+All date/time values coming from the Backend are ISO 8601.
 
-مثال:
+Example:
 
 ```text
 2026-07-24T14:20:00Z
 ```
 
-الـFrontend مسؤول عن تحويلها للشكل المناسب للعرض.
+Queue dates (`queueDate`, report `date`) are plain `YYYY-MM-DD` strings computed in the **Africa/Cairo** timezone — this is when a service's ticket numbering resets for the day.
+
+The Frontend is responsible for converting timestamps into a display-friendly format.
 
 ---
 
-# 30. Authentication Header
+# 19. Authentication Header
 
-جميع الـProtected Endpoints ترسل الـJWT:
+All protected endpoints require the JWT:
 
 ```text
 Authorization: Bearer JWT_TOKEN
 ```
 
-الـPublic Endpoints لا تحتاج Token:
+Public endpoints that don't need a token:
 
 ```text
 POST /api/auth/login
 GET  /api/branches
 GET  /api/branches/:branchId/services
 POST /api/tickets
-GET  /api/tickets/:ticketId/track
+GET  /api/tickets/:ticketId/track   (requires X-Guest-Token header instead)
 ```
 
 ---
 
-# 31. Backend Security Rules
+# 20. Backend Security Rules
 
-الـFrontend لا يعتبر مصدر ثقة للصلاحيات.
+The Frontend is never treated as a trusted source of authorization.
 
-الـBackend يجب أن يتحقق من:
+The Backend must verify:
 
 - Authentication
 - Role
-- Employee Branch
-- Employee Service
-- Ticket Ownership Scope
+- Employee's assigned Branch
+- Employee's assigned Service
+- Ticket ownership scope
 
-مثال:
+Example:
 
-موظف:
+An employee assigned to:
 
 `Mansoura → Dentistry`
 
-لا يستطيع تنفيذ Actions على:
+cannot perform actions on:
 
 `Mansoura → Internal Medicine`
 
-ولا:
+nor on:
 
 `Cairo → Dentistry`
 
-حتى لو قام بتغيير الـRequest يدوياً.
+even if the request is manually altered.
 
 ---
 
-# 32. MVP Final Rules
+# 21. MVP Final Rules
 
-كل Queue يتم تحديدها بواسطة:
+Every queue is identified by:
 
 `Branch + Service`
 
-كل Employee مرتبط بـ:
+Every employee is tied to:
 
 `Branch + Service + Counter Number`
 
-الـAdmin مسؤول عن:
+The Admin is responsible for:
 
 `All Branches + All Services`
 
-الـCustomer:
+The Customer flow is:
 
 `Select Branch → Select Service → Join Queue`
 
-حساب الانتظار:
+Wait calculation:
 
 `Estimated Wait = People Ahead × Default Service Time`
 
-الـTicket Number يتم إنشاؤه من الـBackend حسب Prefix الخاص بالـService.
+The ticket number is generated by the Backend using the service's prefix.
 
-لا يوجد في الـMVP:
+Not included in the MVP:
 
 - Customer Accounts
 - Customer Login / Register
-- Branch Management
-- Service Management
+- Branch Management (create/edit/delete)
+- Service Management (create/edit/delete)
 - Counter Management
 - Department Management
 - Advanced Permissions
-- WebSocket / Socket.IO
+- WebSocket / Socket.IO (live push updates — the frontend uses polling instead)
 - Advanced Queue Rules
+- Per-branch or per-service report/settings filtering
 
-أي شيء خارج هذا الـContract يعتبر Future Work.
-
-</div>
+Anything outside this contract is considered future work.

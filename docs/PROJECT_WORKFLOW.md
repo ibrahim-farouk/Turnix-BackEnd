@@ -1,118 +1,117 @@
 # 🚀 Turnix - Project Workflow
 ## Smart Queue Management System
 
-# 🎯 فكرة المشروع
+# 🎯 Project Idea
 
-Turnix هو نظام لإدارة طوابير الانتظار يسمح للعملاء بحجز دورهم أونلاين قبل الوصول إلى الفرع، كما يسمح للموظفين بإدارة الطابور لحظة بلحظة، ويوفر للإدارة تقارير وإعدادات النظام.
+Turnix is a queue management system that lets customers join a branch's queue online before arriving, lets employees manage the queue in real time, and gives admins system-wide reports and settings.
 
-يوجد نوعان من المستخدمين:
+There are two kinds of users:
 
-1. Customer (بدون Login)
-2. Admin / Employee (Login)
+1. Customer (no login)
+2. Admin / Employee (login required)
 
 ---
 
 # 👥 User Roles
 
-## 1- Customer
+## 1. Customer
 
-لا يحتاج إلى إنشاء حساب أو تسجيل دخول.
+Does not need to create an account or log in.
 
-يمكنه:
+Can:
 
-- الدخول للموقع
-- اختيار الفرع
-- اختيار الخدمة
-- إدخال الاسم ورقم الهاتف
-- حجز دوره
-- استلام رقم التذكرة
-- متابعة دوره مباشرة
-
----
-
-## 2- Employee
-
-يسجل دخول باستخدام البريد الإلكتروني وكلمة المرور.
-
-يمكنه:
-
-- مشاهدة الطابور الحالي
-- استدعاء العميل التالي
-- تخطي العميل
-- اعتبار العميل No Show
-- إنهاء الخدمة
-
-لا يستطيع:
-
-- إدارة الموظفين
-- تعديل الإعدادات
-- رؤية التقارير الإدارية
+- Visit the site
+- Select a branch
+- Select a service
+- Enter full name and phone number
+- Join the queue
+- Receive a ticket number
+- Track their turn live
 
 ---
 
-## 3- Admin
+## 2. Employee
 
-يمتلك جميع صلاحيات الموظف بالإضافة إلى:
+Logs in with email and password.
 
-- إدارة الموظفين
-- إضافة موظفين
-- تعديل بيانات الموظفين
-- حذف الموظفين
-- عرض التقارير
-- تعديل إعدادات النظام
+Can:
+
+- View the current queue
+- Call the next customer
+- Skip a customer
+- Complete a service
+
+Cannot:
+
+- Manage employees
+- Change system settings
+- View admin reports
+
+---
+
+## 3. Admin
+
+Has all employee permissions, plus:
+
+- Manage employees
+- Add employees
+- Edit employee data
+- Deactivate employees
+- View reports
+- Change system settings
 
 ---
 
 # 🔄 Project Workflow
 
-## أولاً: Customer Flow
+## 1. Customer Flow
 
 Landing Page
 
 ↓
 
-يقرأ فكرة النظام
+Reads about the system
 
 ↓
 
-يضغط Join Queue
+Clicks Join Queue
 
 ↓
 
-يختار:
+Selects:
 
 - Branch
 - Service
 
 ↓
 
-يدخل:
+Enters:
 
 - Full Name
 - Phone Number
 
 ↓
 
-يضغط Join Queue
+Clicks Join Queue
 
 ↓
 
-يقوم النظام بإنشاء:
+The system generates:
 
 - Ticket Number
 - Queue Position
 - Estimated Waiting Time
-- QR / Reference ID
+- A one-time Guest Token (used to track the ticket)
 
 ↓
 
-ينتقل إلى
+Moves to
 
 Queue Tracking
 
 ↓
 
-يتابع:
+Tracks:
 
 - Current Serving
 - People Ahead
@@ -121,19 +120,19 @@ Queue Tracking
 
 ↓
 
-عندما يحين دوره
+When their turn comes
 
 ↓
 
-يتوجه إلى الشباك
+Goes to the counter
 
 ↓
 
-يقوم الموظف بإنهاء الخدمة
+The employee completes the service
 
 ↓
 
-تنتهي الرحلة.
+The journey ends.
 
 ---
 
@@ -147,7 +146,7 @@ Workspace
 
 ↓
 
-يرى:
+Sees:
 
 - Current Serving
 - Waiting Queue
@@ -155,7 +154,7 @@ Workspace
 
 ↓
 
-يختار أول عميل
+Selects the first customer
 
 ↓
 
@@ -163,13 +162,13 @@ Call Next
 
 ↓
 
-العميل يصبح:
+The customer becomes:
 
 Serving
 
 ↓
 
-بعد انتهاء الخدمة
+After the service ends
 
 ↓
 
@@ -177,23 +176,23 @@ Complete Service
 
 ↓
 
-التذكرة تصبح Completed
+The ticket becomes Completed
 
 ↓
 
-النظام يستدعي العميل التالي.
+The system is ready to call the next customer.
 
 ---
 
-إذا لم يحضر العميل:
+If the customer does not show up:
 
 ↓
 
-Mark as No Show
+Skip Customer
 
 ↓
 
-ينتقل للعميل التالي.
+The ticket becomes Skipped, and the employee moves to the next customer.
 
 ---
 
@@ -207,9 +206,9 @@ Workspace
 
 ↓
 
-يمكنه متابعة الطابور مثل الموظف.
+Can monitor the queue like an employee, after selecting a Branch and a Service.
 
-ثم يستطيع الانتقال إلى:
+Can also go to:
 
 Employees
 
@@ -217,7 +216,7 @@ Employees
 
 - Add Employee
 - Edit Employee
-- Delete Employee
+- Deactivate Employee
 - View Employee
 
 ---
@@ -226,14 +225,14 @@ Reports
 
 ↓
 
-مشاهدة:
+View:
 
 - Customers Served
+- Skipped Tickets
 - Average Waiting Time
 - Average Service Time
-- Skipped Tickets
 
-ويمكنه تصدير التقرير.
+And can export the report data.
 
 ---
 
@@ -241,12 +240,9 @@ Settings
 
 ↓
 
-تعديل:
+Change:
 
-- Queue Name
 - Default Service Time
-- Maximum Waiting Capacity
-- Password
 
 ---
 
@@ -254,7 +250,7 @@ Profile
 
 ↓
 
-تعديل بياناته الشخصية.
+Update personal information and password.
 
 ---
 
@@ -263,7 +259,6 @@ Profile
 ## Public Pages
 
 1. Landing Page
-
 2. Queue Tracking
 
 ---
@@ -277,13 +272,9 @@ Profile
 ## Dashboard
 
 4. Workspace
-
 5. Employees (Admin Only)
-
 6. Reports (Admin Only)
-
 7. Settings (Admin Only)
-
 8. Profile
 
 ---
@@ -303,13 +294,9 @@ Profile
 
 ---
 
-# 📌 Queue Status Flow
+# 📌 Ticket Status Flow
 
 Waiting
-
-↓
-
-Called
 
 ↓
 
@@ -319,13 +306,21 @@ Serving
 
 Completed
 
-أو
+or
 
-Waiting
+Serving
 
 ↓
 
-No Show
+Skipped
+
+or
+
+Serving
+
+↓
+
+Cancelled
 
 ---
 
@@ -344,10 +339,6 @@ Ticket Generated
 ↓
 
 Queue Tracking
-
-↓
-
-Called
 
 ↓
 
@@ -413,7 +404,7 @@ Profile
 
 # 🧩 Shared Components
 
-سيتم استخدام نفس الـ Components في جميع الصفحات:
+The same components are reused across all pages:
 
 - Navbar
 - Sidebar
@@ -433,13 +424,12 @@ Profile
 
 ---
 
-# ✅ النهاية
+# ✅ Summary
 
-بهذا الـ Workflow يكون مسار المشروع كاملاً كالتالي:
+With this workflow, the full project path is:
 
-Customer → يحجز دوره → يتابع التذكرة → يصل دوره → يحصل على الخدمة.
+Customer → joins the queue → tracks the ticket → gets called → receives the service.
 
-Employee → يدير الطابور → يستدعي العملاء → ينهي الخدمات.
+Employee → manages the queue → calls customers → completes services.
 
-Admin → يدير النظام بالكامل → الموظفين → التقارير → الإعدادات.
-
+Admin → manages the whole system → employees → reports → settings.

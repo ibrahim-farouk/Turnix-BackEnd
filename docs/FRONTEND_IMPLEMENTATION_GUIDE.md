@@ -1,25 +1,23 @@
-<div dir="rtl" align="right">
-
 # Turnix – Frontend Implementation Guide
 
 ## MVP Scope
 
-الـFigma هو المرجع الأساسي للشكل والتصميم.
+Figma is the primary reference for look and feel.
 
-هذا الملف هو المرجع الأساسي للـBehavior والـBusiness Logic وطريقة تعامل الـFrontend مع الـBackend.
+This file is the primary reference for **behavior** and **business logic**, and for how the Frontend talks to the Backend. See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for the exact request/response contract of every endpoint.
 
-أي بيانات موجودة في Figma مثل الأسماء والأرقام والتذاكر هي Mock Data فقط، والبيانات الحقيقية تأتي من الـBackend.
+Any data shown in Figma (names, numbers, tickets) is mock data only — real data always comes from the Backend.
 
-هدفنا تنفيذ MVP بسيط خلال أسبوع، لذلك لا يتم إضافة Features خارج المذكور في هذا الملف.
+The goal is a simple MVP; do not add features beyond what's described in this file.
 
 ---
 
 ## 1. User Roles
 
-يوجد نوعان من المستخدمين الذين يقومون بـLogin:
+Two kinds of users log in:
 
 ### ADMIN
-يمكنه الوصول إلى:
+Can access:
 - Workspace
 - Employees
 - Reports
@@ -28,37 +26,37 @@
 - Logout
 
 ### EMPLOYEE
-يمكنه الوصول إلى:
+Can access:
 - Workspace
 - Profile
 - Logout
 
-ولا يمكنه الوصول إلى:
+Cannot access:
 - Employees
 - Reports
 - Settings
 
-الـCustomer لا يقوم بعمل Login أو Register.
+Customers never log in or register.
 
 ---
 
 ## 2. Login
 
-نفس Login Page تستخدم للـAdmin والـEmployee.
+The same Login page is used for both Admin and Employee.
 
-بعد نجاح Login، الـBackend يرجع بيانات المستخدم والـRole، والـFrontend يعرض الصفحات المناسبة حسب الـRole.
+After a successful login, the Backend returns the user data and role, and the Frontend renders the pages appropriate for that role.
 
-كل صفحات الـAdmin والـEmployee تكون Protected Routes.
+All Admin and Employee pages are Protected Routes.
 
-إذا لم يكن المستخدم مسجل دخول يتم Redirect إلى Login.
+If the user isn't logged in, redirect to Login.
 
-إذا انتهت الـSession / Token يتم Logout وإعادة المستخدم إلى Login.
+If the session/token expires, log the user out and redirect to Login.
 
 ---
 
 ## 3. Customer – Join Queue
 
-الـCustomer يقوم بالخطوات التالية:
+The customer goes through these steps:
 
 1. Select Branch
 2. Select Service
@@ -66,23 +64,23 @@
 4. Phone Number
 5. Join Queue
 
-الـBranches والـServices تأتي من الـBackend وليست Hardcoded.
+Branches and Services come from the Backend — they are never hardcoded.
 
-الـService Dropdown يكون Disabled حتى يتم اختيار Branch.
+The Service dropdown is disabled until a Branch is selected.
 
-بعد اختيار Branch يتم تحميل الـServices الخاصة به.
+After selecting a Branch, its Services are loaded (`GET /branches/:branchId/services`).
 
-عند تغيير Branch:
-- يتم Reset للـService المختارة.
-- يتم تحميل Services الخاصة بالـBranch الجديد.
+When the Branch changes:
+- The selected Service is reset.
+- Services for the new Branch are reloaded.
 
-بعد نجاح Join Queue ينتقل العميل إلى Queue Tracking.
+After a successful Join Queue, the customer is taken to Queue Tracking. **Store the `guestToken` returned by the API** (e.g. in `localStorage`, keyed by ticket ID) — it's returned only once and is required to track the ticket.
 
 ---
 
 ## 4. Queue Tracking
 
-البيانات تأتي بالكامل من الـBackend:
+All data comes entirely from the Backend:
 
 - Ticket Number
 - Status
@@ -92,9 +90,11 @@
 - Branch
 - Service
 - Current Serving
-- Counter Number عند الحاجة
+- Counter Number, when relevant
 
-الـTicket Status المستخدمة في الـMVP:
+Every request to `GET /tickets/:ticketId/track` must include the `X-Guest-Token` header with the stored guest token. A missing/invalid token returns `401`/`403`.
+
+Ticket statuses used in the MVP:
 
 - WAITING
 - SERVING
@@ -102,69 +102,71 @@
 - SKIPPED
 - CANCELLED
 
-`Almost Your Turn` هي UI State فقط وليست Status في الـDatabase.
+`Almost Your Turn` is a UI state only, not a status stored in the database.
 
-يتم تحديث Queue Tracking باستخدام Polling كل 5–10 ثوانٍ بدون Reload كامل للصفحة.
+Queue Tracking updates via polling every 5–10 seconds, without a full page reload.
 
-عند الوصول إلى:
+Once the ticket reaches:
 - COMPLETED
 - SKIPPED
 - CANCELLED
 
-يتم إيقاف الـPolling وإظهار الحالة النهائية للعميل.
+stop polling and show the final state to the customer.
 
-إذا كانت الـTicket غير موجودة يتم عرض:
+If the ticket doesn't exist (or the guest token doesn't match), show:
 
 `Ticket not found.`
 
-مع زر:
+with a button:
 
 `Return Home`
 
 ---
 ## 5. Workspace
 
-الـWaiting Queue والـStatistics تأتي من الـBackend.
+Waiting Queue and Statistics come from the Backend.
 
-كل Service داخل كل Branch لها Queue مستقلة.
+Every Service within every Branch has its own independent queue.
 
 ### EMPLOYEE
 
-الـEmployee يرى ويتعامل فقط مع Queue الخاصة بالـBranch والـService المرتبط به.
+The employee only sees and acts on the queue for their own assigned Branch and Service.
 
-مثال:
+Example:
 
 Employee → Mansoura Branch → Dentistry
 
-الموظف يرى Dentistry Queue في Mansoura فقط، وليس باقي Services.
+The employee sees the Dentistry queue in Mansoura only, not other services.
 
-لا يحتاج Employee إلى Branch أو Service Selector، لأن الـBackend يعرف الـBranch والـService من المستخدم المسجل.
+The employee doesn't need a Branch or Service selector — the Backend already knows the branch/service from the logged-in user, and ignores any branch/service sent by the frontend for this role.
 
 ### ADMIN
 
-الـAdmin مسؤول عن جميع الـBranches والـServices.
+The admin is responsible for all Branches and Services.
 
-في Workspace يكون لديه:
+In Workspace, the admin has:
 
 - Branch Dropdown
 - Service Dropdown
 
-بعد اختيار Branch يتم تحميل Services الخاصة به.
+Both are **required** — `GET /workspace` returns `400` for an admin if either `branchId` or `serviceId` is missing, so the workspace view should only be requested once both are selected.
 
-بعد اختيار Service يتم عرض Queue الخاصة بالـBranch والـService المختارين.
+After selecting a Branch, its Services are loaded.
 
-الـService Dropdown يكون Disabled حتى يتم اختيار Branch.
+After selecting a Service, the queue for that Branch + Service is shown.
 
-عند تغيير Branch يتم Reset للـService المختارة.
+The Service dropdown is disabled until a Branch is selected.
 
-الـStatistics:
+When the Branch changes, the selected Service is reset.
+
+Statistics:
 
 - Waiting
 - Serving
 - Completed
 - Avg Wait
 
-الـStatistics تخص الـQueue المحددة حالياً وتأتي من الـBackend.
+Statistics are scoped to the currently selected queue and come from the Backend.
 
 ---
 
@@ -182,24 +184,22 @@ Employee → Mansoura Branch → Dentistry
 ### Cancel Ticket
 `SERVING → CANCELLED`
 
-بعد نجاح أي Action يتم تحديث:
+After any successful action, refresh:
 
 - Current Serving
 - Waiting Queue
 - Statistics
 - Queue Positions
 
-لا يتم تغيير الحالة في الـFrontend قبل نجاح Request من الـBackend.
+Don't change ticket state in the Frontend before the Backend request succeeds (no optimistic updates).
 
-لا يمكن للموظف عمل Call لـCustomer جديد إذا كان لديه Ticket حالياً في حالة SERVING.
-
-يجب أولاً عمل Complete أو Skip أو Cancel.
+An employee cannot call a new customer while they already have a ticket in `SERVING` status — Complete, Skip or Cancel must happen first, otherwise the Backend returns `409`.
 
 ---
 
 ## 7. Ticket Details Modal
 
-عند الضغط على Eye Icon داخل Waiting Queue يفتح Modal للعرض فقط يحتوي على:
+Clicking the Eye icon in the Waiting Queue opens a view-only modal with:
 
 - Ticket Number
 - Customer Name
@@ -211,15 +211,17 @@ Employee → Mansoura Branch → Dentistry
 - Estimated Wait
 - Status
 
-لا نحتاج صفحة منفصلة للـTicket Details.
+All of this data is already present in the Workspace response (`waitingQueue` array) — **no separate API call is needed** to open this modal.
+
+There is no separate Ticket Details page.
 
 ---
 
 ## 8. Employees
 
-صفحة Employees خاصة بالـAdmin فقط.
+The Employees page is Admin only.
 
-الـTable يحتوي على:
+The table shows:
 
 - Employee Name
 - Email
@@ -230,49 +232,57 @@ Employee → Mansoura Branch → Dentistry
 - Last Login
 - Actions
 
-في الـMVP نستخدم:
+In the MVP we use:
 
 - Active
 - Inactive
 
-ولا نحتاج On Break أو Real-Time Presence.
+No On Break or real-time presence states.
+
+The list supports filtering by Branch and by Status, plus a text Search on name/employee ID — there is currently no Service filter on this endpoint.
 
 ---
 
 ## 9. Add Employee Modal
 
-عند الضغط على `+ Add Employee` يفتح Modal يحتوي على:
+Clicking `+ Add Employee` opens a modal with:
 
 - Full Name
+- Job Title
 - Email
 - Phone Number
 - Branch
-- Service : [Select Service]
+- Service (Select Service)
 - Counter Number
 - Password
 - Confirm Password
 
-عند اختيار Branch يتم تحميل Services الخاصة بهذا الـBranch.
+Selecting a Branch loads the Services for that branch.
 
-الـService Dropdown يكون Disabled حتى يتم اختيار Branch.
+The Service dropdown is disabled until a Branch is selected.
 
-عند تغيير Branch يتم Reset للـService المختارة.
+When the Branch changes, the selected Service is reset.
 
-بعد النجاح:
-- يتم إغلاق الـModal.
-- يتم تحديث Employees Table.
-- يتم إظهار Success Message.
+`confirmPassword` is a frontend-only check and is never sent to the Backend.
+
+On success:
+- The modal closes.
+- The Employees table refreshes.
+- A success message is shown.
+
+The Backend rejects the request with `409` if the chosen Branch + Service pair already has an active employee assigned.
 
 ---
 
 ## 10. View Employee Modal
 
-عند الضغط على Eye Icon في Employees يفتح Modal للعرض فقط يحتوي على:
+Clicking the Eye icon in Employees opens a view-only modal with:
 
 - Employee ID
 - Full Name
 - Email
 - Phone
+- Job Title
 - Branch
 - Service
 - Counter Number
@@ -280,89 +290,91 @@ Employee → Mansoura Branch → Dentistry
 - Last Login
 - Member Since
 
-لا نحتاج Employee Details Page منفصلة.
+No separate Employee Details page is needed.
 
 ---
 
 ## 11. Edit Employee Modal
 
-عند الضغط على Edit يفتح Modal يحتوي على:
+Clicking Edit opens a modal with:
 
 - Full Name
-- Email
 - Phone Number
 - Branch
 - Service
 - Counter Number
+- Status (Active / Inactive)
+
+**Email, Job Title and Password are not editable from this modal** — the Backend's update endpoint does not accept them. To change an employee's password, use the separate Reset Password action (section 12).
+
+On success the modal closes and the Employees table refreshes.
+
+When the Branch changes, the current Service selection is reset and Services for the new Branch are loaded. Changing Branch/Service is rejected with `409` if the new pair is already assigned to another active employee.
+
+---
+
+## 12. Reset Employee Password
+
+A dedicated action (e.g. a menu item or button on the employee row) opens a small modal with:
+
 - New Password
 - Confirm New Password
 
-إذا كانت حقول Password فارغة لا يتم تغيير Password.
-الـAdmin لا يرى Password الحالي للموظف، ولكنه يستطيع تعيين Password جديد.
-بعد النجاح يتم إغلاق الـModal وتحديث Employees Table.
+`confirmPassword` matching is checked on the Frontend only; only `newPassword` is sent to the Backend (`PATCH /employees/:id/reset-password`). The admin never sees the employee's current password.
 
-عند تغيير Branch يتم Reset للـService الحالية وتحميل Services الخاصة بالـBranch الجديد.
+On success, show a confirmation message. The employee will be required to use the new password on their next login.
 
 ---
 
-## 12. Delete Employee
+## 13. Deactivate Employee
 
-عند الضغط على Delete يظهر Confirmation Modal قبل تنفيذ العملية.
+Clicking Delete shows a Confirmation Modal before the action runs.
 
-بعد النجاح:
-- يتم إغلاق الـModal.
-- يتم تحديث Employees Table.
-- الموظف لا يستطيع Login مرة أخرى.
+On success:
+- The modal closes.
+- The Employees table refreshes.
+- The employee can no longer log in.
 
-لا يتم حذف الموظف من الـFrontend قبل نجاح Request من الـBackend.
+Don't remove the employee from the Frontend list before the Backend request succeeds — the record isn't actually deleted, it's set to `Inactive`.
 
 ---
 
-## 13. Counter Number
+## 14. Counter Number
 
-لتبسيط الـMVP، الـCounter Number يكون جزءاً من بيانات الـEmployee.
+To keep the MVP simple, Counter Number is just a field on the Employee record.
 
-مثال:
+Example:
 
 `Employee → Mansoura Branch → Dentistry → Counter 3`
 
-لا نحتاج حالياً:
+Not needed for now:
 
 - Counter Management
 - Add Counter
 - Edit Counter
 - Counter Page
 
-عند Call Customer يتم استخدام Counter Number الخاص بالموظف.
+When calling a customer, the employee's own Counter Number is used automatically.
 
 ---
 
-## 14. Reports
+## 15. Reports
 
-## 14. Reports
+The Reports page is Admin only.
 
-صفحة Reports خاصة بالـAdmin.
+It contains:
 
-تحتوي على:
+- Date Filter (exact date, or a text search over the date string)
 
-- Branch Filter
-- Service Filter
-- Date Filter
+There is currently **no Branch or Service filter** on Reports — the data is always aggregated across all branches and services. Don't build Branch/Service selectors for this page unless the Backend adds that support.
 
-عند اختيار Branch يتم تحميل Services الخاصة به.
+All statistics and table data come from the Backend based on the active filters.
 
-يمكن اختيار:
-- All Branches
-- All Services
-- أو Branch / Service محددة
-
-كل الـStatistics والـTable Data تأتي من الـBackend حسب الـFilters.
-
-إذا كان Export Report لن يتم تنفيذه في الـMVP يتم إزالة الزر.
+Export uses `GET /reports/export`, which returns all matching records (no pagination) as JSON — use it to generate a downloadable file (e.g. CSV) on the Frontend.
 
 ---
 
-## 15. Profile
+## 16. Profile
 
 ### Personal Information
 - Full Name
@@ -377,7 +389,11 @@ Employee → Mansoura Branch → Dentistry
 - Role
 - Last Login
 
-الحقول التالية تكون Read Only:
+The user can edit:
+- Full Name
+- Phone Number
+
+The following fields are Read Only:
 - Email
 - Job Title
 - Employee ID
@@ -386,21 +402,11 @@ Employee → Mansoura Branch → Dentistry
 - Role
 - Last Login
 
-يتم إزالة Department.
+The Admin can update an employee's Job Title (but not Email) via Edit Employee.
 
-المستخدم يستطيع تعديل:
-- Full Name
-- Phone Number
+### Profile Picture
 
-الحقول التالية تكون Read Only:
-- Email
-- Job Title
-- Employee ID
-- Branch
-- Role
-- Last Login
-
-الـAdmin يستطيع تعديل Email الخاص بالموظف من Edit Employee.
+The user can upload/replace their profile picture (`PATCH /profile/picture`, multipart form, field `profileImage`, jpeg/jpg/png/webp, max 5 MB). The previous picture is replaced.
 
 ### Security
 - Current Password
@@ -408,21 +414,21 @@ Employee → Mansoura Branch → Dentistry
 - Confirm Password
 - Update Password
 
-المستخدم يستطيع تغيير Password الخاص بنفسه من Profile.
+The user can change their own password from Profile. `confirmPassword` is sent to and validated by the Backend (must match `newPassword`), in addition to any Frontend check.
 
 ---
 
-## 16. Settings
+## 17. Settings
 
-`Default Service Time` هي متوسط الوقت المتوقع لخدمة Customer واحد.
+`Default Service Time` is the average expected time to serve one customer.
 
-في الـMVP تكون Global لجميع الـBranches والـServices.
+In the MVP it is global across all Branches and Services — there is no per-branch or per-service override.
 
-القيمة الافتراضية تكون 15 دقيقة، ويمكن للـAdmin تغييرها من Settings.
+Default value is 15 minutes; the Admin can change it from Settings.
 
-يستخدم الـBackend هذه القيمة في حساب Estimated Wait.
+The Backend uses this value to compute Estimated Wait.
 
-لا نحتاج حالياً:
+Not needed for now:
 - Branch Management
 - Service Management
 - Counter Management
@@ -430,30 +436,30 @@ Employee → Mansoura Branch → Dentistry
 
 ---
 
-## 17. Validation
+## 18. Validation
 
-كل Forms تحتوي على Frontend Validation، والـBackend يقوم أيضاً بالـValidation.
+Every form has Frontend validation, and the Backend also validates independently.
 
-أهم الحالات:
+Key cases:
 
 - Required Fields
 - Valid Email
-- Valid Phone
+- Valid Egyptian Phone Number
 - Branch Required
 - Service Required
-- Password Required عند Add Employee
-- Password وConfirm Password يجب أن يتطابقا
-- Email المستخدم مسبقاً يظهر Error واضح
+- Password Required when Adding an Employee
+- Password and Confirm Password must match
+- An Email or Phone already in use shows a clear error
 
-أي Validation Error من الـBackend يجب عرضه للمستخدم.
+Any validation error returned by the Backend must be surfaced to the user (field-level `details` when present).
 
 ---
 
-## 18. Loading & Feedback
+## 19. Loading & Feedback
 
-أثناء أي API Request يتم Disable للزر لمنع Double Submission.
+During any API request, disable the triggering button to prevent double submission.
 
-أمثلة:
+Examples:
 
 - Sign In → Signing In...
 - Add Employee → Adding...
@@ -461,49 +467,47 @@ Employee → Mansoura Branch → Dentistry
 - Join Queue → Joining...
 - Complete Service → Processing...
 
-بعد نجاح العمليات المهمة يتم إظهار Success Toast / Message.
-
-وفي حالة الخطأ يتم عرض Error واضح للمستخدم.
+Show a success toast/message after important operations succeed, and a clear error message on failure.
 
 ---
 
-## 19. Empty States
+## 20. Empty States
 
-Waiting Queue فارغة:
+Empty Waiting Queue:
 
 `No customers are currently waiting.`
 
-Employees بدون نتائج:
+No employees found:
 
 `No employees found.`
 
-Reports بدون نتائج:
+No report records:
 
 `No records found.`
 
-Search بدون نتائج:
+No search results:
 
 `No matching results found.`
 
 ---
 
-## 20. Pagination & Search
+## 21. Pagination & Search
 
-Employees وWaiting Queue يدعمان:
+Employees and Reports support:
 
 - Search
 - Filters
 - Pagination
 
-الـFrontend يتعامل مع الـPagination Data القادمة من الـBackend ولا يفترض أن جميع البيانات محملة مرة واحدة.
+The Frontend uses the pagination data returned by the Backend and never assumes all data is loaded at once.
 
 ---
 
-## 21. API Integration
+## 22. API Integration
 
-لا يتم Hardcode لأي Backend Data.
+No Backend data is ever hardcoded.
 
-كل البيانات مثل:
+All of the following come from the Backend:
 
 - Branches
 - Services
@@ -514,51 +518,47 @@ Employees وWaiting Queue يدعمان:
 - Settings
 - Statistics
 
-تأتي من الـBackend.
-
-يفضل فصل API Layer حسب الـFeatures:
+It's best to split the API layer by feature:
 
 - auth
 - tickets
-- employees
 - branches
 - services
-- reports
+- workspace
+- employees
 - profile
 - settings
+- reports
 
 ---
 
-## 22. Final Rule
+## 23. Final Rule
 
-أي Button أو Icon موجود في الـFigma يجب أن يكون:
+Every button or icon present in Figma must be either:
 
-1. له Function واضحة ومتنفذة.
-2. أو Disabled إذا كان غير متاح.
-3. أو يتم إزالته من الـMVP.
+1. Fully wired to a working function, or
+2. Disabled if not currently available, or
+3. Removed from the MVP.
 
-لا نترك أي Button أو Icon قابل للضغط بدون Behavior معروف.
+Never leave a clickable button or icon with undefined behavior.
 
 ---
 
 ## Queue Logic
 
-كل Service داخل كل Branch لها Queue مستقلة.
+Every Service within every Branch has its own independent queue.
 
-مثال:
+Example:
 
-Dentistry:
-A101 → A102 → A103
+```
+Dentistry:        A101 → A102 → A103
+Internal Medicine: B101 → B102 → B103
+ENT:               C101 → C102 → C103
+```
 
-Internal Medicine:
-B101 → B102 → B103
+The ticket number is generated by the Backend, never by the Frontend.
 
-ENT:
-C101 → C102 → C103
-
-الـTicket Number يتم إنشاؤه من الـBackend وليس الـFrontend.
-
-كل Service يكون لها Prefix خاص بها مثل:
+Each Service has its own prefix, e.g.:
 
 - Dentistry → A
 - Internal Medicine → B
@@ -566,29 +566,25 @@ C101 → C102 → C103
 - Ophthalmology → D
 - Pediatrics → E
 
-Queue Position وPeople Ahead يتم حسابهم داخل نفس الـBranch ونفس الـService فقط.
+Queue Position and People Ahead are computed within the same Branch and same Service only, and reset daily.
 
-مثال:
-
-إذا كان العميل A103 في Dentistry، يتم حساب مكانه بناءً على عملاء Dentistry فقط، وليس باقي Services.
+Example: if customer A103 is in Dentistry, their position is computed based on Dentistry customers only, not other services.
 
 ---
 
-Estimated Wait يتم حسابه في الـBackend باستخدام:
+Estimated Wait is computed on the Backend as:
 
+```
 Estimated Wait = People Ahead × Default Service Time
+```
 
-مثال إذا كان Default Service Time = 15 دقيقة:
+Example with `Default Service Time = 15 minutes`:
 
-Position 1 → 0 دقيقة
-Position 2 → 15 دقيقة
-Position 3 → 30 دقيقة
-Position 4 → 45 دقيقة
+```
+Position 1 → 0 minutes
+Position 2 → 15 minutes
+Position 3 → 30 minutes
+Position 4 → 45 minutes
+```
 
-الـFrontend يعرض Estimated Wait القادمة من الـBackend ولا يقوم بحسابها بنفسه.
-
----
-
-
-
-</div>
+The Frontend only displays the Estimated Wait returned by the Backend and never computes it itself.
