@@ -29,12 +29,73 @@ Turnix is a production-ready REST API for managing walk-in queues. Customers joi
 | Validation | Zod |
 | Uploads | Multer (5 MB, jpeg/jpg/png/webp) |
 | API Docs | OpenAPI 3.0 (swagger-jsdoc + swagger-ui-express) |
+| Real-time | Socket.IO 4 (WebSocket + polling) |
 
-> `socket.io` is listed as a dependency but is **not wired up yet** — live queue updates currently rely on Frontend polling (see [API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)).
+**Socket.IO real-time layer is integrated** — the same HTTP server handles both REST and WebSocket connections. Employees receive live workspace updates (ticket calls, completions, skips, cancellations, and KPI stats) via `branch:{branchId}:service:{serviceId}` rooms. Customers continue to track tickets via REST polling (guest token) as before.
 
 ## 🏗 Architecture
 
 Modular architecture with a strict layering per module:
+
+```
+routes → validator (Zod) → controller → service (business logic) → repository (Mongoose)
+```
+
+Socket.IO is an additive notification layer — it **does not replace** any REST endpoints. All mutations remain REST-only. After a successful DB write in the service layer, the server emits events to the workspace room. Business logic stays in services; Socket.IO only pushes the result.
+
+## 🔌 Socket.IO Real-Time Layer
+
+### Connection & Authentication
+- Same JWT as REST (`Authorization: Bearer` → handshake `auth.token`)
+- Reuses `env.jwtSecret` and `User` model — no second auth system
+- Inactive users rejected (`FORBIDDEN`)
+- Expired/invalid tokens rejected (`UNAUTHORIZED`)
+
+### Rooms
+- One room per queue: `branch:{branchId}:service:{serviceId}`
+- Only users with matching `branch` + `service` assignments join
+- ADMINs without branch/service assignment connect but join no room (receive nothing)
+
+### Events (MVP)
+
+| Event | Direction | Trigger |
+|---|---|---|
+| `ticket:created` | server → clients | `POST /api/tickets` |
+| `ticket:called` | server → clients | `PATCH /api/workspace/tickets/:id/call` |
+| `ticket:completed` | server → clients | `PATCH /api/workspace/tickets/:id/complete` |
+| `ticket:skipped` | server → clients | `PATCH /api/workspace/tickets/:id/skip` |
+| `ticket:cancelled` | server → clients | `PATCH /api/workspace/tickets/:id/cancel` |
+| `workspace:stats` | server → clients | after any mutation |
+
+### Event Payload Shapes
+```json
+// ticket:created
+{ "ticket": { "id", "ticketNumber", "status":"WAITING", "customerName", "service:{id,name}", "queuePosition", "peopleAhead", "estimatedWait", "joinedAt" } }
+
+// ticket:called
+{ "ticket": { "id", "ticketNumber", "status":"SERVING", "counterNumber", "calledAt" }, "previousTicketId?" }
+
+// ticket:completed / skipped / cancelled
+{ "ticket": { "id", "ticketNumber", "status", "completedAt?" } }
+
+// workspace:stats
+{ "statistics": { "waiting", "serving", "completed", "avgWait" } }
+```
+
+### Frontend Integration (Contract)
+- Employees connect with `io(API, { auth: { token } })`
+- On `ticket:created` → insert ticket into waiting queue
+- On `ticket:called` → update current serving card, decrement waiting positions
+- On `ticket:completed/skipped/cancelled` → clear current serving if matches, remove from waiting queue
+- On `workspace:stats` → refresh KPI strip
+
+### Security
+- Room membership derived from server-side `socket.data` (never client-supplied)
+- No sensitive fields emitted (`guestTokenHash`, `password`, etc.)
+- No mutating client-to-server events in MVP
+
+### Graceful Shutdown
+`io.close()` is called before `server.close()` and `disconnectMongo()` — existing connections are closed cleanly.
 
 ```
 routes → validator (Zod) → controller → service (business logic) → repository (Mongoose)

@@ -23,6 +23,13 @@ import {
     ERROR_CODES,
     USER_ROLES
 } from "../../common/utils/constants.js";
+import {
+    emitTicketCalled,
+    emitTicketCompleted,
+    emitTicketSkipped,
+    emitTicketCancelled,
+    emitWorkspaceStats
+} from "../../socket/emit.js";
 
 // Get current date based on Egypt timezone
 const getCurrentDate = () => {
@@ -214,6 +221,7 @@ export const callCustomer = async (
             employeeId,
             counterNumber
         );
+        
     } catch (error) {
         if (error?.code === 11000) {
             throw new AppError("Another ticket is currently being served", 409, ERROR_CODES.CONFLICT)
@@ -225,13 +233,22 @@ export const callCustomer = async (
         throw new AppError("Ticket could not be called", 409, ERROR_CODES.CONFLICT)
     };
 
-    return {
+    // Real-time broadcast (only after the DB write succeeded).
+    // Fire-and-forget: errors in the emit layer must not affect the REST response.
+    const ticketView = {
         id: updatedTicket._id.toString(),
         ticketNumber: updatedTicket.ticketNumber,
         status: updatedTicket.status,
         counterNumber: updatedTicket.counterNumber,
         calledAt: updatedTicket.calledAt
-    }
+    };
+    // callCustomer throws if there is already a serving ticket, so
+    // `currentServing` is always null here — `previousTicketId` is therefore
+    // never set on the `ticket:called` event from this path.
+    emitTicketCalled(branchId, serviceId, ticketView, currentServing?._id?.toString()).catch(() => {});
+    emitWorkspaceStats(branchId, serviceId).catch(() => {});
+
+    return ticketView;
 }
 
 export const completeService = async (
@@ -282,13 +299,17 @@ export const completeService = async (
         );
     }
 
-
-    return {
+    // Real-time broadcast (only after the DB write succeeded).
+    const ticketView = {
         id: updatedTicket._id.toString(),
         ticketNumber: updatedTicket.ticketNumber,
         status: updatedTicket.status,
         completedAt: updatedTicket.completedAt
     };
+    emitTicketCompleted(branchId, serviceId, ticketView).catch(() => {});
+    emitWorkspaceStats(branchId, serviceId).catch(() => {});
+
+    return ticketView;
 };
 
 export const skipCustomer = async (
@@ -339,11 +360,16 @@ export const skipCustomer = async (
         );
     }
 
-    return {
+    // Real-time broadcast (only after the DB write succeeded).
+    const ticketView = {
         id: updatedTicket._id.toString(),
         ticketNumber: updatedTicket.ticketNumber,
         status: updatedTicket.status
-    }
+    };
+    emitTicketSkipped(branchId, serviceId, ticketView).catch(() => {});
+    emitWorkspaceStats(branchId, serviceId).catch(() => {});
+
+    return ticketView;
 }
 
 export const cancelService = async (
@@ -394,9 +420,14 @@ export const cancelService = async (
         );
     }
 
-    return {
+    // Real-time broadcast (only after the DB write succeeded).
+    const ticketView = {
         id: updatedTicket._id.toString(),
         ticketNumber: updatedTicket.ticketNumber,
         status: updatedTicket.status
-    }
+    };
+    emitTicketCancelled(branchId, serviceId, ticketView).catch(() => {});
+    emitWorkspaceStats(branchId, serviceId).catch(() => {});
+
+    return ticketView;
 }

@@ -6,15 +6,29 @@ export const connectMongo = async () => {
     throw new Error("MONGO_URI is required");
   }
 
-  mongoose.set("strictQuery", true); // Suppress deprecation warning for strictQuery
+  mongoose.set("strictQuery", true);
 
-  await mongoose.connect(env.mongoUri, {
-    maxPoolSize: 10, // Maximum number of connections in the pool
-    serverSelectionTimeoutMS: 10000, // Connection timeout
-    socketTimeoutMS: 45000 // Socket timeout
-  });
+  try {
+    await mongoose.connect(env.mongoUri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      family: 4,
+    });
+
+    console.log("MongoDB connected successfully");
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+    throw error;
+  }
 };
 
 export const disconnectMongo = async () => {
-  await mongoose.disconnect();
+  try {
+    await mongoose.disconnect();
+    console.log("MongoDB disconnected successfully");
+  } catch (error) {
+    console.error("MongoDB disconnect failed:", error);
+    throw error;
+  }
 };

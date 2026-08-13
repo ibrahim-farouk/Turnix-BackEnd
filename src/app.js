@@ -60,7 +60,6 @@ app.use(
 
 // MongoDB sanitization
 app.use(mongoSanitize());
-
 // Logging
 app.use(morgan("combined"));
 

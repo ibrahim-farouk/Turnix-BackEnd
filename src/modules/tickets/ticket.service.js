@@ -13,6 +13,7 @@ import {
 
 import AppError from "../../common/errors/app-error.js";
 import { ERROR_CODES } from "../../common/utils/constants.js";
+import { emitTicketCreated, emitWorkspaceStats } from "../../socket/emit.js";
 
 // Generate guest token
 const generateGuestToken = () => {
@@ -93,24 +94,31 @@ export const joinQueue = async ({
     const estimatedWait = peopleAhead * defaultServiceTime;
 
     // 9. Return ticket
-    return {
-        ticket: {
-            id: ticket._id.toString(),
-            ticketNumber: ticket.ticketNumber,
-            status: ticket.status,
-            queuePosition,
-            peopleAhead,
-            estimatedWait,
-            branch: {
-                id: branch._id.toString(),
-                name: branch.name
-            },
-            service: {
-                id: service._id.toString(),
-                name: service.name
-            },
-            joinedAt: ticket.joinedAt
+    const ticketView = {
+        id: ticket._id.toString(),
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+        queuePosition,
+        peopleAhead,
+        estimatedWait,
+        branch: {
+            id: branch._id.toString(),
+            name: branch.name
         },
+        service: {
+            id: service._id.toString(),
+            name: service.name
+        },
+        joinedAt: ticket.joinedAt
+    };
+
+    // 10. Real-time broadcast (only after the DB write succeeded).
+    // Fire-and-forget: errors in the emit layer must not affect the REST response.
+    emitTicketCreated(branchId, serviceId, ticketView).catch(() => {});
+    emitWorkspaceStats(branchId, serviceId).catch(() => {});
+
+    return {
+        ticket: ticketView,
         guestToken
     };
 

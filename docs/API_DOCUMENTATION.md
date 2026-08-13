@@ -1103,7 +1103,7 @@ Not included in the MVP:
 - Counter Management
 - Department Management
 - Advanced Permissions
-- WebSocket / Socket.IO (live push updates — the frontend uses polling instead)
+- WebSocket / Socket.IO is **implemented** for employee workspace updates (see [Socket.IO Documentation](socket-io.md)). Customers still track tickets via REST polling (guest token).
 - Advanced Queue Rules
 - Per-branch or per-service report/settings filtering
 
