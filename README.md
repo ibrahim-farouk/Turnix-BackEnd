@@ -98,7 +98,7 @@
 
 | Layer | Technology | Version |
 |---|---|---|
-| **Runtime** | Node.js | ≥ 18 (ES Modules) |
+| **Runtime** | Node.js | >= 18 (ES Modules) |
 | **Framework** | Express | 4.x |
 | **Database** | MongoDB + Mongoose | 8.x |
 | **Authentication** | JWT (Bearer) + bcryptjs | — |
@@ -115,49 +115,49 @@
 ### High-Level Overview
 
 ```
-��─────────────────────────────────────────────────────────────────��
-│                        CLIENTS                                  │
-│  ��──────────────��  ��──────────────��  ��──────────────��          │
-│  │  Customer    │  │  Employee    │  │  Admin       │          │
-│  │  (REST poll) │  │  (WS + REST) │  │  (REST)      │          │
-│  └──────��───────��  └──────��───────��  └──────��───────��          │
-��─────────��─────────────────��─────────────────��──────────────────��
-          │                 │                 │
-          ��                 ��                 ��
-��─────────────────────────────────────────────────────────────────��
-│                      HTTP SERVER (Express + Socket.IO)          │
-│  ��─────────────────────────────────────────────────────────��   │
-│  │  Express App                                            │   │
-│  │  ├── Security (Helmet, CORS, Rate Limit, Mongo Sanitize)│   │
-│  │  ├── Body Parsing (JSON, URL-encoded, Multipart)        │   │
-│  │  ├── Request ID Middleware                              │   │
-│  │  ├── Swagger UI (/api/docs)                             │   │
-│  │  ├── Routes → Validators → Controllers → Services       │   │
-│  │  └── Error Handling                                      │   │
-│  └─────────────────────────────────────────────────────────��   │
-│  ��─────────────────────────────────────────────────────────��   │
-│  │  Socket.IO Server (same http.Server)                    │   │
-│  │  ├── JWT Handshake Auth (reuse REST secret + User model)│   │
-│  │  ├── Room: branch:{branchId}:service:{serviceId}        │   │
-│  │  └── Events: ticket:created/called/completed/skipped/   │   │
-│  │      cancelled + workspace:stats                        │   │
-│  └─────────────────────────────────────────────────────────��   │
-��─────────────────────────────────────────────────────────────────��
-          │                 │                 │
-          ��                 ��                 ��
-��─────────────────────────────────────────────────────────────────��
-│                         MONGODB                                 │
-│  ��──────────�� ��──────────�� ��──────────�� ��──────────��           │
-│  │  User    │ │  Ticket  │ │  Branch  │ │  Service │           │
-│  │  Counter │ │ Setting  │ │ Report   │ │          │           │
-│  └──────────�� └──────────�� └──────────�� └──────────��           │
-��─────────────────────────────────────────────────────────────────��
++-------------------------------------------------------------------+
+|                            CLIENTS                                |
+|  +----------------+  +----------------+  +----------------+      |
+|  |  Customer      |  |  Employee      |  |  Admin         |      |
+|  |  (REST poll)   |  |  (WS + REST)   |  |  (REST)        |      |
+|  +----------------+  +----------------+  +----------------+      |
++----------+--------------------+--------------------+------------+
+           |                    |                    |
+           v                    v                    v
++-------------------------------------------------------------------+
+|                    HTTP SERVER (Express + Socket.IO)             |
+|  +-------------------------------------------------------------+  |
+|  |  Express App                                                |  |
+|  |  +-- Security (Helmet, CORS, Rate Limit, Mongo Sanitize)   |  |
+|  |  +-- Body Parsing (JSON, URL-encoded, Multipart)           |  |
+|  |  +-- Request ID Middleware                                  |  |
+|  |  +-- Swagger UI (/api/docs)                                 |  |
+|  |  +-- Routes -> Validators -> Controllers -> Services       |  |
+|  |  +-- Error Handling                                         |  |
+|  +-------------------------------------------------------------+  |
+|  +-------------------------------------------------------------+  |
+|  |  Socket.IO Server (same http.Server)                        |  |
+|  |  +-- JWT Handshake Auth (reuse REST secret + User model)   |  |
+|  |  +-- Room: branch:{branchId}:service:{serviceId}           |  |
+|  |  +-- Events: ticket:created/called/completed/skipped/      |  |
+|  |      cancelled + workspace:stats                           |  |
+|  +-------------------------------------------------------------+  |
++-------------------------------------------------------------------+
+           |                    |                    |
+           v                    v                    v
++-------------------------------------------------------------------+
+|                          MONGODB                                  |
+|  +----------+  +----------+  +----------+  +----------+          |
+|  |  User    |  |  Ticket  |  |  Branch  |  |  Service |          |
+|  |  Counter |  | Setting  |  | Report   |  |          |          |
+|  +----------+  +----------+  +----------+  +----------+          |
++-------------------------------------------------------------------+
 ```
 
 ### Modular Layering (per module)
 
 ```
-routes → validator (Zod) → controller → service (business logic) → repository (Mongoose)
+routes -> validator (Zod) -> controller -> service (business logic) -> repository (Mongoose)
 ```
 
 **Socket.IO is an additive notification layer** — it **does not replace** any REST endpoints. All mutations remain REST-only. After a successful DB write in the service layer, the server emits events to the workspace room. Business logic stays in services; Socket.IO only pushes the result.
@@ -192,12 +192,12 @@ const socket = io(API_BASE, {
 
 | Event | Direction | Trigger |
 |---|---|---|
-| `ticket:created` | server → clients | `POST /api/tickets` |
-| `ticket:called` | server → clients | `PATCH /api/workspace/tickets/:id/call` |
-| `ticket:completed` | server → clients | `PATCH /api/workspace/tickets/:id/complete` |
-| `ticket:skipped` | server → clients | `PATCH /api/workspace/tickets/:id/skip` |
-| `ticket:cancelled` | server → clients | `PATCH /api/workspace/tickets/:id/cancel` |
-| `workspace:stats` | server → clients | after any mutation |
+| `ticket:created` | server -> clients | `POST /api/tickets` |
+| `ticket:called` | server -> clients | `PATCH /api/workspace/tickets/:id/call` |
+| `ticket:completed` | server -> clients | `PATCH /api/workspace/tickets/:id/complete` |
+| `ticket:skipped` | server -> clients | `PATCH /api/workspace/tickets/:id/skip` |
+| `ticket:cancelled` | server -> clients | `PATCH /api/workspace/tickets/:id/cancel` |
+| `workspace:stats` | server -> clients | after any mutation |
 
 ### Event Payload Shapes
 
@@ -262,7 +262,7 @@ const socket = io("http://localhost:5000", {
 socket.on("connect", () => console.log("Socket connected:", socket.id));
 socket.on("connect_error", (err) => {
   if (err.message.includes("UNAUTHORIZED") || err.message.includes("FORBIDDEN")) {
-    redirectToLogin(); // Token invalid/expired — re-login
+    redirectToLogin(); // Token invalid/expired -- re-login
   }
 });
 
@@ -401,7 +401,7 @@ src/
 │   ├── rooms.js                # workspaceRoom() + joinWorkspace()
 │   ├── stats.js                # getWorkspaceStats() (repo aggregates)
 │   └── emit.js                 # typed emit helpers
-��── modules/
+**── modules/
     ├── auth/                   # POST /auth/login
     ├── branches/               # GET /branches (public)
     ├── services/               # GET /branches/:branchId/services (public)
@@ -421,7 +421,7 @@ module/
 ├── module.service.js
 ├── module.repository.js
 ├── module.validator.js
-��── module.swagger.yaml
+**── module.swagger.yaml
 ```
 
 ---
@@ -438,25 +438,25 @@ module/
 
 | Endpoint | Customer | Employee | Admin |
 |---|---|---|---|
-| `POST /api/tickets` | �� | �� | �� |
-| `GET /api/tickets/:id/track` | �� (guest token) | �� | �� |
-| `GET /api/workspace` | ��� | �� (own queue) | �� (all queues) |
-| `PATCH /api/workspace/tickets/:id/call` | ��� | �� | �� |
-| `PATCH /api/workspace/tickets/:id/complete` | ��� | �� | �� |
-| `PATCH /api/workspace/tickets/:id/skip` | ��� | �� | �� |
-| `PATCH /api/workspace/tickets/:id/cancel` | ��� | �� | �� |
-| `GET/POST/PATCH/DELETE /api/employees` | ��� | ��� | �� |
-| `GET/PATCH /api/settings` | ��� | ��� | �� |
-| `GET /api/reports` | ��� | ��� | �� |
+| `POST /api/tickets` | *** | ** | ** |
+| `GET /api/tickets/:id/track` | ** (guest token) | ** | ** |
+| `GET /api/workspace` | *** | ** (own queue) | ** (all queues) |
+| `PATCH /api/workspace/tickets/:id/call` | *** | ** | ** |
+| `PATCH /api/workspace/tickets/:id/complete` | *** | ** | ** |
+| `PATCH /api/workspace/tickets/:id/skip` | *** | ** | ** |
+| `PATCH /api/workspace/tickets/:id/cancel` | *** | ** | ** |
+| `GET/POST/PATCH/DELETE /api/employees` | *** | *** | ** |
+| `GET/PATCH /api/settings` | *** | *** | ** |
+| `GET /api/reports` | *** | *** | ** |
 
 ---
 
 ## Ticket Lifecycle
 
 ```
-WAITING ──call──�� SERVING ──complete──�� COMPLETED
-                     │──skip──�� SKIPPED
-                     └──cancel─�� CANCELLED
+WAITING --call--> SERVING --complete--> COMPLETED
+                     |--skip--> SKIPPED
+                     |--cancel-> CANCELLED
 ```
 
 - **WAITING** → Customer joins queue, receives ticket number & position
@@ -473,7 +473,7 @@ WAITING ──call──�� SERVING ──complete──�� COMPLETED
 
 ### Prerequisites
 
-- **Node.js** ≥ 18
+- **Node.js** >= 18
 - **MongoDB** instance (local or Atlas)
 
 ### Installation
@@ -501,7 +501,7 @@ Edit `.env` with your values:
 | `PORT` | No | `5000` | HTTP port |
 | `NODE_ENV` | No | `development` | `development` / `production` |
 | `MONGO_URI` | **Yes** | — | MongoDB connection string |
-| `JWT_SECRET` | **Yes (prod)** | — | Strong secret (≥ 32 chars). Startup fails in production with weak/missing secret |
+| `JWT_SECRET` | **Yes (prod)** | — | Strong secret (>= 32 chars). Startup fails in production with weak/missing secret |
 | `JWT_EXPIRES_IN` | No | `10h` | Token TTL (30d with rememberMe) |
 | `CLIENT_ORIGIN` | No | — | Allowed CORS origin (`*` allows all) |
 | `APP_URL` | No | — | Public backend URL (used for file URLs) |
@@ -544,7 +544,7 @@ Swagger UI available at `http://localhost:5000/api/docs`.
 | Variable | Description |
 |---|---|
 | `MONGO_URI` | MongoDB connection string (e.g., `mongodb://localhost:27017/turnix`) |
-| `JWT_SECRET` | **Critical**: Strong random string ≥ 32 chars. Use `openssl rand -base64 32` to generate. |
+| `JWT_SECRET` | **Critical**: Strong random string >= 32 chars. Use `openssl rand -base64 32` to generate. |
 
 ### Optional
 
@@ -596,7 +596,7 @@ tests/
 │   ├── connection.test.js
 │   ├── rooms.test.js
 │   └── events.test.js
-��── setup.js
+**── setup.js
 ```
 
 ### Running Tests (when implemented)
@@ -619,7 +619,7 @@ npm run test:coverage
 ### Production Checklist
 
 - [ ] Set `NODE_ENV=production`
-- [ ] Use strong `JWT_SECRET` (≥ 32 chars, generated via `openssl rand -base64 32`)
+- [ ] Use strong `JWT_SECRET` (>= 32 chars, generated via `openssl rand -base64 32`)
 - [ ] Configure `MONGO_URI` for production database
 - [ ] Set `CLIENT_ORIGIN` to your frontend domain (not `*`)
 - [ ] Set `APP_URL` to your public API URL
@@ -702,4 +702,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-*Built with ������ for efficient queue management*
+*Built with <3 for efficient queue management*
